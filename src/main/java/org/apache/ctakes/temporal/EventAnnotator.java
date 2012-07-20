@@ -11,11 +11,12 @@ import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.classifier.CleartkAnnotator;
 import org.cleartk.classifier.Feature;
 import org.cleartk.classifier.Instance;
-import org.cleartk.classifier.Instances;
 import org.cleartk.classifier.chunking.BIOChunking;
 import org.cleartk.classifier.feature.extractor.ContextExtractor;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Following;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Preceding;
+import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor;
+import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor.PatternType;
 import org.cleartk.classifier.feature.extractor.simple.CoveredTextExtractor;
 import org.cleartk.classifier.feature.extractor.simple.SimpleFeatureExtractor;
 import org.cleartk.classifier.feature.extractor.simple.TypePathExtractor;
@@ -52,7 +53,7 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     this.tokenFeatureExtractors = new ArrayList<SimpleFeatureExtractor>();
     this.tokenFeatureExtractors.addAll(Arrays.asList(
         new CoveredTextExtractor(),
-        new TypePathExtractor(BaseToken.class, "lemmaEntries/key"),
+        new CharacterCategoryPatternExtractor(PatternType.REPEATS_MERGED),
         new TypePathExtractor(BaseToken.class, "partOfSpeech")));
 
     // add window of features before and after
@@ -70,44 +71,61 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     for (Sentence sentence : JCasUtil.select(jCas, Sentence.class)) {
       List<BaseToken> tokens = JCasUtil.selectCovered(jCas, BaseToken.class, sentence);
 
+      // during training, the list of all outcomes for the tokens
+      List<String> outcomes;
+      if (this.isTraining()) {
+        List<EventMention> events = JCasUtil.selectCovered(jCas, EventMention.class, sentence);
+        outcomes = this.eventChunking.createOutcomes(jCas, tokens, events);
+      }
+      // during prediction, the list of outcomes predicted so far
+      else {
+        outcomes = new ArrayList<String>();
+      }
+
       // extract features for all tokens
-      List<List<Feature>> featureLists = new ArrayList<List<Feature>>();
       List<EntityMention> entities = JCasUtil.selectCovered(jCas, EntityMention.class, sentence);
       List<String> tokenEntityTags = this.entityChunking.createOutcomes(jCas, tokens, entities);
-      int tokenIndex = 0;
+      int tokenIndex = -1;
       int window = 2;
       for (BaseToken token : tokens) {
+        ++tokenIndex;
+
         List<Feature> features = new ArrayList<Feature>();
+        // features from token attributes
         for (SimpleFeatureExtractor extractor : this.tokenFeatureExtractors) {
           features.addAll(extractor.extract(jCas, token));
         }
+        // features from surrounding tokens
         for (ContextExtractor<?> extractor : this.contextFeatureExtractors) {
           features.addAll(extractor.extractWithin(jCas, token, sentence));
         }
+        // features from surrounding entities
         int begin = Math.max(tokenIndex - window, 0);
         int end = Math.min(tokenIndex + window, tokenEntityTags.size());
         for (int i = begin; i < end; ++i) {
-          features.add(new Feature("EntityTag_" + i, tokenEntityTags.get(i)));
+          features.add(new Feature("EntityTag_" + (i - begin), tokenEntityTags.get(i)));
         }
-        featureLists.add(features);
-        ++tokenIndex;
-      }
+        // features from previous classifications
+        int nPreviousClassifications = 2;
+        for (int i = nPreviousClassifications; i > 0; --i) {
+          int index = tokenIndex - i;
+          String previousOutcome = index < 0 ? "O" : outcomes.get(index);
+          features.add(new Feature("PreviousOutcome_" + i, previousOutcome));
+        }
+        // if training, write to data file
+        if (this.isTraining()) {
+          String outcome = outcomes.get(tokenIndex);
+          this.dataWriter.write(new Instance<String>(outcome, features));
+        }
 
-      // during training, convert events to chunk labels and write the training Instances
-      if (this.isTraining()) {
-        List<EventMention> events = JCasUtil.selectCovered(jCas, EventMention.class, sentence);
-        List<String> outcomes = this.eventChunking.createOutcomes(jCas, tokens, events);
-        for (Instance<String> instance : Instances.toInstances(outcomes, featureLists)) {
-          this.dataWriter.write(instance);
+        // if predicting, add prediction to outcomes
+        else {
+          outcomes.add(this.classifier.classify(features));
         }
       }
 
       // during prediction, convert chunk labels to events and add them to the CAS
-      else {
-        List<String> outcomes = new ArrayList<String>();
-        for (List<Feature> featureList : featureLists) {
-          outcomes.add(this.classifier.classify(featureList));
-        }
+      if (!this.isTraining()) {
         this.eventChunking.createChunks(jCas, tokens, outcomes);
       }
     }

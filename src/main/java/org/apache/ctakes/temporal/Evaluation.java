@@ -3,34 +3,59 @@ package org.apache.ctakes.temporal;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.uima.UimaContext;
+import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
+import org.apache.uima.cas.CAS;
+import org.apache.uima.cas.CASException;
+import org.apache.uima.cas.Feature;
 import org.apache.uima.collection.CollectionException;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ResourceInitializationException;
+import org.apache.uima.util.CasCopier;
 import org.apache.uima.util.Progress;
 import org.apache.uima.util.ProgressImpl;
 import org.cleartk.classifier.CleartkAnnotator;
 import org.cleartk.classifier.jar.DefaultDataWriterFactory;
+import org.cleartk.classifier.jar.JarClassifierBuilder;
+import org.cleartk.classifier.jar.JarClassifierFactory;
 import org.cleartk.classifier.opennlp.MaxentDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.cleartk.eval.Evaluation_ImplBase;
 import org.cleartk.util.ViewURIUtil;
+import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.component.JCasCollectionReader_ImplBase;
+import org.uimafit.component.ViewCreatorAnnotator;
+import org.uimafit.component.ViewTextCopierAnnotator;
 import org.uimafit.descriptor.ConfigurationParameter;
 import org.uimafit.factory.AggregateBuilder;
 import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.factory.CollectionReaderFactory;
+import org.uimafit.factory.ExternalResourceFactory;
+import org.uimafit.pipeline.JCasIterable;
 import org.uimafit.pipeline.SimplePipeline;
+import org.uimafit.util.JCasUtil;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
+import edu.mayo.bmi.uima.core.ae.SentenceDetector;
+import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
+import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
+import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
+import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
+import edu.mayo.bmi.uima.core.type.textsem.EventMention;
+
 public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistics> {
+
+  private static final String GOLD_VIEW_NAME = "GoldView";
 
   public static void main(String[] args) throws Exception {
     // parse command line arguments
@@ -55,7 +80,11 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
         new File("target/eval"),
         rawTextDirectory,
         knowtatorXMLDirectory);
-    evaluation.crossValidation(patientSets, 3);
+    List<AnnotationStatistics> foldStats = evaluation.crossValidation(patientSets, 3);
+    for (AnnotationStatistics stats : foldStats) {
+      System.err.println(stats);
+    }
+    System.err.println(AnnotationStatistics.addAll(foldStats));
   }
 
   private File rawTextDirectory;
@@ -90,6 +119,15 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
         KnowtatorXMLReader.class,
         KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
         this.knowtatorXMLDirectory));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
+    AnalysisEngineDescription sentenceDetector = AnalysisEngineFactory.createPrimitiveDescription(SentenceDetector.class);
+    ExternalResourceFactory.createDependencyAndBind(
+        sentenceDetector,
+        "MaxentModel",
+        SuffixMaxentModelResourceImpl.class,
+        SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
+    aggregateBuilder.add(sentenceDetector);
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         EventAnnotator.class,
         CleartkAnnotator.PARAM_IS_TRAINING,
@@ -99,13 +137,84 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
         DefaultDataWriterFactory.PARAM_OUTPUT_DIRECTORY,
         directory));
     SimplePipeline.runPipeline(collectionReader, aggregateBuilder.createAggregate());
+    JarClassifierBuilder.trainAndPackage(directory, "2000", "5");
   }
 
   @Override
   protected AnnotationStatistics test(CollectionReader collectionReader, File directory)
       throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    AggregateBuilder aggregateBuilder = new AggregateBuilder();
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        ViewCreatorAnnotator.class,
+        ViewCreatorAnnotator.PARAM_VIEW_NAME,
+        GOLD_VIEW_NAME));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        ViewTextCopierAnnotator.class,
+        ViewTextCopierAnnotator.PARAM_SOURCE_VIEW_NAME,
+        CAS.NAME_DEFAULT_SOFA,
+        ViewTextCopierAnnotator.PARAM_DESTINATION_VIEW_NAME,
+        GOLD_VIEW_NAME));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        KnowtatorXMLReader.class,
+        KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
+        this.knowtatorXMLDirectory), CAS.NAME_DEFAULT_SOFA, GOLD_VIEW_NAME);
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(GoldEntityMentionCopier.class));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
+    AnalysisEngineDescription sentenceDetector = AnalysisEngineFactory.createPrimitiveDescription(SentenceDetector.class);
+    ExternalResourceFactory.createDependencyAndBind(
+        sentenceDetector,
+        "MaxentModel",
+        SuffixMaxentModelResourceImpl.class,
+        SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
+    aggregateBuilder.add(sentenceDetector);
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        EventAnnotator.class,
+        CleartkAnnotator.PARAM_IS_TRAINING,
+        false,
+        JarClassifierFactory.PARAM_CLASSIFIER_JAR_PATH,
+        new File(directory, "model.jar")));
+
+    AnnotationStatistics stats = new AnnotationStatistics();
+    for (JCas jCas : new JCasIterable(collectionReader, aggregateBuilder.createAggregate())) {
+      JCas goldView = jCas.getView(GOLD_VIEW_NAME);
+      JCas systemView = jCas.getView(CAS.NAME_DEFAULT_SOFA);
+      Collection<EventMention> goldEvents = JCasUtil.select(goldView, EventMention.class);
+      System.err.println("GOLD:");
+      for (EventMention event : goldEvents) {
+        System.err.println(event.getCoveredText());
+      }
+      Collection<EventMention> systemEvents = JCasUtil.select(systemView, EventMention.class);
+      System.err.println("SYSTEM:");
+      for (EventMention event : systemEvents) {
+        System.err.println(event.getCoveredText());
+      }
+      stats.add(goldEvents, systemEvents);
+    }
+    return stats;
+  }
+
+  public static class GoldEntityMentionCopier extends JCasAnnotator_ImplBase {
+
+    @Override
+    public void process(JCas jCas) throws AnalysisEngineProcessException {
+      JCas goldView, systemView;
+      try {
+        goldView = jCas.getView(GOLD_VIEW_NAME);
+        systemView = jCas.getView(CAS.NAME_DEFAULT_SOFA);
+      } catch (CASException e) {
+        throw new AnalysisEngineProcessException(e);
+      }
+      CasCopier copier = new CasCopier(goldView.getCas(), systemView.getCas());
+      for (EntityMention goldMention : JCasUtil.select(goldView, EntityMention.class)) {
+        Annotation copy = (Annotation) copier.copyFs(goldMention);
+        Feature sofaFeature = copy.getType().getFeatureByBaseName("sofa");
+        copy.setFeatureValue(sofaFeature, systemView.getSofa());
+        copy.addToIndexes();
+      }
+
+    }
+
   }
 
   public static class FilesCollectionReader extends JCasCollectionReader_ImplBase {
