@@ -50,5 +50,10 @@
 			<artifactId>opennlp-uima</artifactId>
 			<version>1.5.2-incubating</version>
 		</dependency>
+		<dependency>
+			<groupId>org.cleartk</groupId>
+			<artifactId>cleartk-timeml</artifactId>
+			<version>1.0.2-SNAPSHOT</version>
+		</dependency>
 	</dependencies>
 </project>

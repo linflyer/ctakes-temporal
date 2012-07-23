@@ -4,10 +4,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.ctakes.temporal.Evaluation.Statistics;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -29,9 +31,16 @@ import org.cleartk.classifier.jar.JarClassifierFactory;
 import org.cleartk.classifier.opennlp.MaxentDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.cleartk.eval.Evaluation_ImplBase;
+import org.cleartk.syntax.opennlp.PosTaggerAnnotator;
+import org.cleartk.syntax.opennlp.SentenceAnnotator;
+import org.cleartk.timeml.time.TimeAnnotator;
+import org.cleartk.timeml.type.Time;
+import org.cleartk.token.stem.snowball.DefaultSnowballStemmer;
+import org.cleartk.token.tokenizer.TokenAnnotator;
 import org.cleartk.util.ViewURIUtil;
 import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.component.JCasCollectionReader_ImplBase;
+import org.uimafit.component.NoOpAnnotator;
 import org.uimafit.component.ViewCreatorAnnotator;
 import org.uimafit.component.ViewTextCopierAnnotator;
 import org.uimafit.descriptor.ConfigurationParameter;
@@ -39,11 +48,14 @@ import org.uimafit.factory.AggregateBuilder;
 import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.factory.CollectionReaderFactory;
 import org.uimafit.factory.ExternalResourceFactory;
+import org.uimafit.factory.TypeSystemDescriptionFactory;
 import org.uimafit.pipeline.JCasIterable;
 import org.uimafit.pipeline.SimplePipeline;
 import org.uimafit.util.JCasUtil;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.HashMultiset;
+import com.google.common.collect.Multiset;
 import com.google.common.io.Files;
 
 import edu.mayo.bmi.uima.core.ae.SentenceDetector;
@@ -52,8 +64,15 @@ import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
 import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
+import edu.mayo.bmi.uima.core.type.textsem.TimeMention;
 
-public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistics> {
+public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
+
+  static class Statistics {
+    public AnnotationStatistics events = new AnnotationStatistics();
+
+    public AnnotationStatistics times = new AnnotationStatistics();
+  }
 
   private static final String GOLD_VIEW_NAME = "GoldView";
 
@@ -80,21 +99,56 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
         new File("target/eval"),
         rawTextDirectory,
         knowtatorXMLDirectory);
-    List<AnnotationStatistics> foldStats = evaluation.crossValidation(patientSets, 3);
-    for (AnnotationStatistics stats : foldStats) {
-      System.err.println(stats);
+    List<Statistics> foldStats = evaluation.crossValidation(patientSets, 3);
+    for (Statistics stats : foldStats) {
+      System.err.println("EVENTS");
+      System.err.println(stats.events);
+      System.err.println("TIMES");
+      System.err.println(stats.times);
     }
-    System.err.println(AnnotationStatistics.addAll(foldStats));
+    List<AnnotationStatistics> eventStats = new ArrayList<AnnotationStatistics>();
+    List<AnnotationStatistics> timeStats = new ArrayList<AnnotationStatistics>();
+    for (Statistics stats : foldStats) {
+      eventStats.add(stats.events);
+      timeStats.add(stats.times);
+    }
+    System.err.println("OVERALL");
+    System.err.println("EVENTS");
+    System.err.println(AnnotationStatistics.addAll(eventStats));
+    System.err.println("Gold:");
+    println(evaluation.goldEvents);
+    System.err.println("System:");
+    println(evaluation.systemEvents);
+    System.err.println("TIMES");
+    System.err.println(AnnotationStatistics.addAll(timeStats));
+    System.err.println("Gold:");
+    println(evaluation.goldTimes);
+    System.err.println("System:");
+    println(evaluation.systemTimes);
+  }
+
+  private static void println(Multiset<String> multiset) {
+    List<String> keys = new ArrayList<String>(multiset.elementSet());
+    Collections.sort(keys);
+    for (String key : keys) {
+      System.err.printf("%4d %s\n", multiset.count(key), key);
+    }
   }
 
   private File rawTextDirectory;
 
   private File knowtatorXMLDirectory;
 
+  public Multiset<String> goldEvents, systemEvents, goldTimes, systemTimes;
+
   public Evaluation(File baseDirectory, File rawTextDirectory, File knowtatorXMLDirectory) {
     super(baseDirectory);
     this.rawTextDirectory = rawTextDirectory;
     this.knowtatorXMLDirectory = knowtatorXMLDirectory;
+    this.goldEvents = HashMultiset.create();
+    this.systemEvents = HashMultiset.create();
+    this.goldTimes = HashMultiset.create();
+    this.systemTimes = HashMultiset.create();
   }
 
   @Override
@@ -141,8 +195,7 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
   }
 
   @Override
-  protected AnnotationStatistics test(CollectionReader collectionReader, File directory)
-      throws Exception {
+  protected Statistics test(CollectionReader collectionReader, File directory) throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         ViewCreatorAnnotator.class,
@@ -174,22 +227,29 @@ public class Evaluation extends Evaluation_ImplBase<Integer, AnnotationStatistic
         false,
         JarClassifierFactory.PARAM_CLASSIFIER_JAR_PATH,
         new File(directory, "model.jar")));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        NoOpAnnotator.class,
+        TypeSystemDescriptionFactory.createTypeSystemDescription("org.cleartk.TypeSystem")));
+    aggregateBuilder.add(SentenceAnnotator.getDescription());
+    aggregateBuilder.add(TokenAnnotator.getDescription());
+    aggregateBuilder.add(PosTaggerAnnotator.getDescription());
+    aggregateBuilder.add(DefaultSnowballStemmer.getDescription("English"));
+    aggregateBuilder.add(TimeAnnotator.FACTORY.getAnnotatorDescription());
 
-    AnnotationStatistics stats = new AnnotationStatistics();
+    Statistics stats = new Statistics();
     for (JCas jCas : new JCasIterable(collectionReader, aggregateBuilder.createAggregate())) {
       JCas goldView = jCas.getView(GOLD_VIEW_NAME);
       JCas systemView = jCas.getView(CAS.NAME_DEFAULT_SOFA);
       Collection<EventMention> goldEvents = JCasUtil.select(goldView, EventMention.class);
-      System.err.println("GOLD:");
-      for (EventMention event : goldEvents) {
-        System.err.println(event.getCoveredText());
-      }
       Collection<EventMention> systemEvents = JCasUtil.select(systemView, EventMention.class);
-      System.err.println("SYSTEM:");
-      for (EventMention event : systemEvents) {
-        System.err.println(event.getCoveredText());
-      }
-      stats.add(goldEvents, systemEvents);
+      stats.events.add(goldEvents, systemEvents);
+      this.goldEvents.addAll(JCasUtil.toText(goldEvents));
+      this.systemEvents.addAll(JCasUtil.toText(systemEvents));
+      Collection<TimeMention> goldTimes = JCasUtil.select(goldView, TimeMention.class);
+      Collection<Time> systemTimes = JCasUtil.select(systemView, Time.class);
+      stats.times.add(goldTimes, systemTimes);
+      this.goldTimes.addAll(JCasUtil.toText(goldTimes));
+      this.systemTimes.addAll(JCasUtil.toText(systemTimes));
     }
     return stats;
   }

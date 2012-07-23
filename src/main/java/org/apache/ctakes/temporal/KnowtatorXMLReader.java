@@ -28,6 +28,7 @@ import edu.mayo.bmi.uima.core.type.refsem.OntologyConcept;
 import edu.mayo.bmi.uima.core.type.refsem.UmlsConcept;
 import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
+import edu.mayo.bmi.uima.core.type.textsem.TimeMention;
 
 public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
@@ -177,6 +178,8 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         // TODO
       } else if ("TIMEX3".equals(annotation.type)) {
         String timexClass = stringSlots.remove("class");
+        TimeMention timeMention = new TimeMention(jCas, annotation.span.begin, annotation.span.end);
+        timeMention.addToIndexes();
         // TODO
       } else if ("ALINK".equals(annotation.type)) {
         KnowtatorAnnotation source = annotationSlots.remove("Event");
