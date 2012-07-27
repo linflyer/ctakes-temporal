@@ -39,7 +39,6 @@ import org.uimafit.component.ViewCreatorAnnotator;
 import org.uimafit.component.ViewTextCopierAnnotator;
 import org.uimafit.factory.AggregateBuilder;
 import org.uimafit.factory.AnalysisEngineFactory;
-import org.uimafit.factory.CollectionReaderFactory;
 import org.uimafit.factory.ExternalResourceFactory;
 import org.uimafit.factory.TypeSystemDescriptionFactory;
 import org.uimafit.pipeline.JCasIterable;
@@ -151,10 +150,7 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
         files.add(file);
       }
     }
-    return CollectionReaderFactory.createCollectionReader(
-        UriCollectionReader.class,
-        UriCollectionReader.PARAM_FILES,
-        files);
+    return UriCollectionReader.getCollectionReaderFromFiles(files);
   }
 
   @Override
