@@ -3,9 +3,11 @@ package org.apache.ctakes.temporal;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -16,6 +18,7 @@ import org.apache.ctakes.knowtator.KnowtatorXMLParser;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.FSArray;
+import org.apache.uima.jcas.tcas.Annotation;
 import org.cleartk.util.ViewURIUtil;
 import org.jdom2.JDOMException;
 import org.uimafit.component.JCasAnnotator_ImplBase;
@@ -26,6 +29,8 @@ import edu.mayo.bmi.uima.core.type.refsem.Event;
 import edu.mayo.bmi.uima.core.type.refsem.EventProperties;
 import edu.mayo.bmi.uima.core.type.refsem.OntologyConcept;
 import edu.mayo.bmi.uima.core.type.refsem.UmlsConcept;
+import edu.mayo.bmi.uima.core.type.relation.BinaryTextRelation;
+import edu.mayo.bmi.uima.core.type.relation.RelationArgument;
 import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 import edu.mayo.bmi.uima.core.type.textsem.TimeMention;
@@ -71,6 +76,8 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
     entityTypes.put("Sign_symptom", CONST.NE_TYPE_ID_FINDING);
 
     // create a CAS object for each annotation
+    Map<String, Annotation> idMentionMap = new HashMap<String, Annotation>();
+    List<KnowtatorRelation> relations = new ArrayList<KnowtatorRelation>();
     for (KnowtatorAnnotation annotation : annotations) {
       // copy the slots so we can remove them as we use them
       Map<String, String> stringSlots = new HashMap<String, String>(annotation.stringSlots);
@@ -126,6 +133,7 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
         // add entity mention to CAS
         entityMention.addToIndexes();
+        idMentionMap.put(annotation.id, entityMention);
 
       } else if ("EVENT".equals(annotation.type)) {
 
@@ -171,26 +179,28 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         eventProperties.addToIndexes();
         event.addToIndexes();
         eventMention.addToIndexes();
+        idMentionMap.put(annotation.id, eventMention);
 
       } else if ("DOCTIME".equals(annotation.type)) {
         // TODO
+
       } else if ("SECTIONTIME".equals(annotation.type)) {
         // TODO
+
       } else if ("TIMEX3".equals(annotation.type)) {
         String timexClass = stringSlots.remove("class");
         TimeMention timeMention = new TimeMention(jCas, annotation.span.begin, annotation.span.end);
         timeMention.addToIndexes();
         // TODO
+
       } else if ("ALINK".equals(annotation.type)) {
-        KnowtatorAnnotation source = annotationSlots.remove("Event");
-        KnowtatorAnnotation target = annotationSlots.remove("related_to");
-        String relationType = stringSlots.remove("Relationtype");
-        // TODO
+        // store the ALINK information for later, once all annotations are in the CAS
+        relations.add(new KnowtatorRelation(annotation, "Event", "related_to", "Relationtype"));
+
       } else if ("TLINK".equals(annotation.type)) {
-        KnowtatorAnnotation source = annotationSlots.remove("Event");
-        KnowtatorAnnotation target = annotationSlots.remove("related_to");
-        String relationType = stringSlots.remove("Relationtype");
-        // TODO
+        // store the TLINK information for later, once all annotations are in the CAS
+        relations.add(new KnowtatorRelation(annotation, "Event", "related_to", "Relationtype"));
+
       } else {
         throw new IllegalArgumentException("Unrecognized type: " + annotation.type);
       }
@@ -205,6 +215,45 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         String message = String.format(format, annotation.type, remainingSlots);
         throw new UnsupportedOperationException(message);
       }
+    }
+
+    // all mentions should be added, so add the relations now
+    for (KnowtatorRelation knowtatorRelation : relations) {
+      Annotation sourceMention = idMentionMap.get(knowtatorRelation.sourceID);
+      Annotation targetMention = idMentionMap.get(knowtatorRelation.targetID);
+      RelationArgument sourceRA = new RelationArgument(jCas);
+      sourceRA.setArgument(sourceMention);
+      sourceRA.addToIndexes();
+      RelationArgument targetRA = new RelationArgument(jCas);
+      targetRA.setArgument(targetMention);
+      targetRA.addToIndexes();
+      BinaryTextRelation relation = new BinaryTextRelation(jCas);
+      // TODO: do something with knowtatorRelation.annotation.type
+      relation.setCategory(knowtatorRelation.type);
+      relation.setArg1(sourceRA);
+      relation.setArg2(targetRA);
+      relation.addToIndexes();
+    }
+  }
+
+  private static class KnowtatorRelation {
+    public KnowtatorAnnotation annotation;
+
+    public String sourceID;
+
+    public String targetID;
+
+    public String type;
+
+    public KnowtatorRelation(
+        KnowtatorAnnotation annotation,
+        String sourceSlot,
+        String targetSlot,
+        String relationTypeSlot) {
+      this.annotation = annotation;
+      this.sourceID = annotation.annotationSlots.get(sourceSlot).id;
+      this.targetID = annotation.annotationSlots.get(targetSlot).id;
+      this.type = annotation.stringSlots.get(relationTypeSlot);
     }
   }
 }
