@@ -97,13 +97,11 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
       Map<String, Boolean> booleanSlots = new HashMap<String, Boolean>(annotation.booleanSlots);
       Map<String, KnowtatorAnnotation> annotationSlots = new HashMap<String, KnowtatorAnnotation>(
           annotation.annotationSlots);
+      KnowtatorAnnotation.Span coveringSpan = annotation.getCoveringSpan();
 
       if (entityTypes.containsKey(annotation.type)) {
         // create the entity mention annotation
-        EntityMention entityMention = new EntityMention(
-            jCas,
-            annotation.span.begin,
-            annotation.span.end);
+        EntityMention entityMention = new EntityMention(jCas, coveringSpan.begin, coveringSpan.end);
         entityMention.setTypeID(entityTypes.get(annotation.type));
         entityMention.setConfidence(1.0f);
         entityMention.setDiscoveryTechnique(CONST.NE_DISCOVERY_TECH_GOLD_ANNOTATION);
@@ -175,10 +173,7 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         event.setDiscoveryTechnique(CONST.NE_DISCOVERY_TECH_GOLD_ANNOTATION);
 
         // create the event mention
-        EventMention eventMention = new EventMention(
-            jCas,
-            annotation.span.begin,
-            annotation.span.end);
+        EventMention eventMention = new EventMention(jCas, coveringSpan.begin, coveringSpan.end);
         eventMention.setConfidence(1.0f);
         eventMention.setDiscoveryTechnique(CONST.NE_DISCOVERY_TECH_GOLD_ANNOTATION);
 
@@ -202,7 +197,7 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
       } else if ("TIMEX3".equals(annotation.type)) {
         String timexClass = stringSlots.remove("class");
-        TimeMention timeMention = new TimeMention(jCas, annotation.span.begin, annotation.span.end);
+        TimeMention timeMention = new TimeMention(jCas, coveringSpan.begin, coveringSpan.end);
         timeMention.addToIndexes();
         idMentionMap.put(annotation.id, timeMention);
         // TODO

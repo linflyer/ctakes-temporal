@@ -1,6 +1,8 @@
 package org.apache.ctakes.knowtator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.base.Objects;
@@ -16,10 +18,39 @@ public class KnowtatorAnnotation {
   public String id;
 
   /**
-   * The character offsets of this annotation (or <code>null</code> if the annotation is not
-   * associated with a span of text).
+   * The character offsets of this annotation (empty if not associated with a span of text).
    */
-  public Span span;
+  public List<Span> spans = new ArrayList<Span>();
+
+  /**
+   * Get a span that approximates {@link #spans}, giving the earliest begin offset and the latest
+   * end offset.
+   */
+  public Span getCoveringSpan() {
+    int begin = Integer.MAX_VALUE;
+    int end = Integer.MIN_VALUE;
+    for (KnowtatorAnnotation.Span span : this.spans) {
+      if (span.begin < begin) {
+        begin = span.begin;
+      }
+      if (span.end > end) {
+        end = span.end;
+      }
+    }
+    return new Span(begin, end);
+  }
+
+  /**
+   * Create a new span and add it to the list (not publicly available)
+   */
+  void addSpan(int begin, int end) {
+    this.spans.add(new Span(begin, end));
+  }
+
+  /**
+   * The text spanned by this annnotation (<code>null</code> if not associated with a span of text).
+   */
+  public String spannedText;
 
   /**
    * The type (or "class") of annotation
@@ -51,7 +82,8 @@ public class KnowtatorAnnotation {
   public int hashCode() {
     return Objects.hashCode(
         this.id,
-        this.span,
+        this.spans,
+        this.spannedText,
         this.type,
         this.stringSlots,
         this.booleanSlots,
@@ -64,8 +96,9 @@ public class KnowtatorAnnotation {
       return false;
     }
     KnowtatorAnnotation that = (KnowtatorAnnotation) obj;
-    return Objects.equal(this.id, that.id) && Objects.equal(this.span, that.span)
-        && Objects.equal(this.type, that.type) && Objects.equal(this.stringSlots, that.stringSlots)
+    return Objects.equal(this.id, that.id) && Objects.equal(this.spans, that.spans)
+        && Objects.equal(this.spannedText, that.spannedText) && Objects.equal(this.type, that.type)
+        && Objects.equal(this.stringSlots, that.stringSlots)
         && Objects.equal(this.booleanSlots, that.booleanSlots)
         && Objects.equal(this.annotationSlots, that.annotationSlots);
   }
@@ -74,7 +107,8 @@ public class KnowtatorAnnotation {
   public String toString() {
     ToStringHelper builder = Objects.toStringHelper(this);
     builder.add("id", this.id);
-    builder.add("span", this.span);
+    builder.add("spans", this.spans);
+    builder.add("spannedText", this.spannedText);
     builder.add("type", this.type);
     builder.add("stringSlots", this.stringSlots);
     builder.add("booleanSlots", this.booleanSlots);
@@ -97,19 +131,16 @@ public class KnowtatorAnnotation {
     public int end;
 
     /**
-     * The text spanned by the given character offsets.
-     */
-    public String text;
-
-    /**
      * Construct a new Span. (Not publicly available.)
      */
-    Span() {
+    Span(int begin, int end) {
+      this.begin = begin;
+      this.end = end;
     }
 
     @Override
     public int hashCode() {
-      return Objects.hashCode(this.begin, this.end, this.text);
+      return Objects.hashCode(this.begin, this.end);
     }
 
     @Override
@@ -118,8 +149,7 @@ public class KnowtatorAnnotation {
         return false;
       }
       Span that = (Span) obj;
-      return Objects.equal(this.begin, that.begin) && Objects.equal(this.end, that.end)
-          && Objects.equal(this.text, that.text);
+      return this.begin == that.begin && this.end == that.end;
     }
 
     @Override
@@ -127,7 +157,6 @@ public class KnowtatorAnnotation {
       ToStringHelper builder = Objects.toStringHelper(this);
       builder.add("begin", this.begin);
       builder.add("end", this.end);
-      builder.add("text", this.text);
       return builder.toString();
     }
 

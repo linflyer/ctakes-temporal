@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -50,15 +51,15 @@ public class KnowtatorXMLParser {
               KnowtatorAnnotation annotation = new KnowtatorAnnotation();
               annotation.id = id;
               annotations.put(id, annotation);
-              Element spanElem = annotationElem.getChild("span");
-              if (spanElem != null) {
-                for (String startStr : this.getAttributeValue(spanElem, "start")) {
-                  for (String endStr : this.getAttributeValue(spanElem, "end")) {
-                    for (Element spannedTextElem : this.getChild(annotationElem, "spannedText")) {
-                      annotation.span = new KnowtatorAnnotation.Span();
-                      annotation.span.begin = Integer.parseInt(startStr);
-                      annotation.span.end = Integer.parseInt(endStr);
-                      annotation.span.text = spannedTextElem.getText();
+              List<Element> spanElems = annotationElem.getChildren("span");
+              if (!spanElems.isEmpty()) {
+                for (Element spannedTextElem : this.getChild(annotationElem, "spannedText")) {
+                  annotation.spannedText = spannedTextElem.getText();
+                }
+                for (Element spanElem : spanElems) {
+                  for (String startStr : this.getAttributeValue(spanElem, "start")) {
+                    for (String endStr : this.getAttributeValue(spanElem, "end")) {
+                      annotation.addSpan(Integer.parseInt(startStr), Integer.parseInt(endStr));
                     }
                   }
                 }
