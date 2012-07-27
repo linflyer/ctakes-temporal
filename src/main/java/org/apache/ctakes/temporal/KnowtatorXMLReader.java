@@ -202,6 +202,7 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         String timexClass = stringSlots.remove("class");
         TimeMention timeMention = new TimeMention(jCas, annotation.span.begin, annotation.span.end);
         timeMention.addToIndexes();
+        idMentionMap.put(annotation.id, timeMention);
         // TODO
 
       } else if ("ALINK".equals(annotation.type)) {
@@ -238,8 +239,22 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
     // all mentions should be added, so add the relations now
     for (KnowtatorRelation knowtatorRelation : relations) {
+
+      // look up the relations in the map and issue an error if they're missing
       Annotation sourceMention = idMentionMap.get(knowtatorRelation.source.id);
       Annotation targetMention = idMentionMap.get(knowtatorRelation.target.id);
+      String badId = null;
+      if (sourceMention == null) {
+        badId = knowtatorRelation.source.id;
+      } else if (targetMention == null) {
+        badId = knowtatorRelation.target.id;
+      }
+      if (badId != null) {
+        String message = String.format("no annotation with id '%s'", badId);
+        throw new UnsupportedOperationException(message);
+      }
+
+      // add the relation to the CAS
       RelationArgument sourceRA = new RelationArgument(jCas);
       sourceRA.setArgument(sourceMention);
       sourceRA.addToIndexes();
