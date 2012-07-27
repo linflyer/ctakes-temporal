@@ -157,10 +157,7 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
   protected void train(CollectionReader collectionReader, File directory) throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(UriToDocumentTextAnnotator.getDescription());
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        KnowtatorXMLReader.class,
-        KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
-        this.knowtatorXMLDirectory));
+    aggregateBuilder.add(KnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory));
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
     AnalysisEngineDescription sentenceDetector = AnalysisEngineFactory.createPrimitiveDescription(SentenceDetector.class);
     ExternalResourceFactory.createDependencyAndBind(
@@ -196,10 +193,10 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
         CAS.NAME_DEFAULT_SOFA,
         ViewTextCopierAnnotator.PARAM_DESTINATION_VIEW_NAME,
         GOLD_VIEW_NAME));
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        KnowtatorXMLReader.class,
-        KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
-        this.knowtatorXMLDirectory), CAS.NAME_DEFAULT_SOFA, GOLD_VIEW_NAME);
+    aggregateBuilder.add(
+        KnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory),
+        CAS.NAME_DEFAULT_SOFA,
+        GOLD_VIEW_NAME);
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(GoldEntityMentionCopier.class));
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
     AnalysisEngineDescription sentenceDetector = AnalysisEngineFactory.createPrimitiveDescription(SentenceDetector.class);

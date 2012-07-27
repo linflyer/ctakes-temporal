@@ -15,14 +15,17 @@ import java.util.regex.Pattern;
 
 import org.apache.ctakes.knowtator.KnowtatorAnnotation;
 import org.apache.ctakes.knowtator.KnowtatorXMLParser;
+import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.FSArray;
 import org.apache.uima.jcas.tcas.Annotation;
+import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.util.ViewURIUtil;
 import org.jdom2.JDOMException;
 import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.descriptor.ConfigurationParameter;
+import org.uimafit.factory.AnalysisEngineFactory;
 
 import edu.mayo.bmi.uima.core.type.constants.CONST;
 import edu.mayo.bmi.uima.core.type.refsem.Event;
@@ -36,6 +39,14 @@ import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 import edu.mayo.bmi.uima.core.type.textsem.TimeMention;
 
 public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
+
+  public static AnalysisEngineDescription getDescription(File knowtatorXMLDirectory)
+      throws ResourceInitializationException {
+    return AnalysisEngineFactory.createPrimitiveDescription(
+        KnowtatorXMLReader.class,
+        KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
+        knowtatorXMLDirectory);
+  }
 
   public static final String PARAM_KNOWTATOR_XML_DIRECTORY = "knowtatorXMLDirectory";
 
