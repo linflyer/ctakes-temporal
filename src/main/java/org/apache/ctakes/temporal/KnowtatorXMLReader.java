@@ -195,11 +195,19 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
       } else if ("ALINK".equals(annotation.type)) {
         // store the ALINK information for later, once all annotations are in the CAS
-        relations.add(new KnowtatorRelation(annotation, "Event", "related_to", "Relationtype"));
+        KnowtatorAnnotation source = annotationSlots.remove("Event");
+        KnowtatorAnnotation target = annotationSlots.remove("related_to");
+        String relationType = stringSlots.remove("Relationtype");
+        relations.add(new KnowtatorRelation(annotation, source, target, relationType));
+        // TODO: store "ALINK" somehow
 
       } else if ("TLINK".equals(annotation.type)) {
         // store the TLINK information for later, once all annotations are in the CAS
-        relations.add(new KnowtatorRelation(annotation, "Event", "related_to", "Relationtype"));
+        KnowtatorAnnotation source = annotationSlots.remove("Event");
+        KnowtatorAnnotation target = annotationSlots.remove("related_to");
+        String relationType = stringSlots.remove("Relationtype");
+        relations.add(new KnowtatorRelation(annotation, source, target, relationType));
+        // TODO: store "TLINK" somehow
 
       } else {
         throw new IllegalArgumentException("Unrecognized type: " + annotation.type);
@@ -219,8 +227,8 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
     // all mentions should be added, so add the relations now
     for (KnowtatorRelation knowtatorRelation : relations) {
-      Annotation sourceMention = idMentionMap.get(knowtatorRelation.sourceID);
-      Annotation targetMention = idMentionMap.get(knowtatorRelation.targetID);
+      Annotation sourceMention = idMentionMap.get(knowtatorRelation.source.id);
+      Annotation targetMention = idMentionMap.get(knowtatorRelation.target.id);
       RelationArgument sourceRA = new RelationArgument(jCas);
       sourceRA.setArgument(sourceMention);
       sourceRA.addToIndexes();
@@ -239,21 +247,21 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
   private static class KnowtatorRelation {
     public KnowtatorAnnotation annotation;
 
-    public String sourceID;
+    public KnowtatorAnnotation source;
 
-    public String targetID;
+    public KnowtatorAnnotation target;
 
     public String type;
 
     public KnowtatorRelation(
         KnowtatorAnnotation annotation,
-        String sourceSlot,
-        String targetSlot,
-        String relationTypeSlot) {
+        KnowtatorAnnotation source,
+        KnowtatorAnnotation target,
+        String relationType) {
       this.annotation = annotation;
-      this.sourceID = annotation.annotationSlots.get(sourceSlot).id;
-      this.targetID = annotation.annotationSlots.get(targetSlot).id;
-      this.type = annotation.stringSlots.get(relationTypeSlot);
+      this.source = source;
+      this.target = target;
+      this.type = relationType;
     }
   }
 }
