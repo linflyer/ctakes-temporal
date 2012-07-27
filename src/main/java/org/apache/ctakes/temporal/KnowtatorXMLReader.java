@@ -259,8 +259,8 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
       targetRA.setArgument(targetMention);
       targetRA.addToIndexes();
       BinaryTextRelation relation = new BinaryTextRelation(jCas);
-      // TODO: do something with knowtatorRelation.annotation.type
-      relation.setCategory(knowtatorRelation.type);
+      // TODO: do something better with knowtatorRelation.annotation.type
+      relation.setCategory(knowtatorRelation.annotation.type + '_' + knowtatorRelation.type);
       relation.setArg1(sourceRA);
       relation.setArg2(targetRA);
       relation.addToIndexes();
