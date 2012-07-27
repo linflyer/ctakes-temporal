@@ -1,7 +1,6 @@
 package org.apache.ctakes.temporal;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -10,20 +9,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.ctakes.temporal.Evaluation.Statistics;
-import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
 import org.apache.uima.cas.Feature;
-import org.apache.uima.collection.CollectionException;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
-import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.util.CasCopier;
-import org.apache.uima.util.Progress;
-import org.apache.uima.util.ProgressImpl;
 import org.cleartk.classifier.CleartkAnnotator;
 import org.cleartk.classifier.jar.DefaultDataWriterFactory;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
@@ -37,13 +31,12 @@ import org.cleartk.timeml.time.TimeAnnotator;
 import org.cleartk.timeml.type.Time;
 import org.cleartk.token.stem.snowball.DefaultSnowballStemmer;
 import org.cleartk.token.tokenizer.TokenAnnotator;
-import org.cleartk.util.ViewURIUtil;
+import org.cleartk.util.ae.UriToDocumentTextAnnotator;
+import org.cleartk.util.cr.UriCollectionReader;
 import org.uimafit.component.JCasAnnotator_ImplBase;
-import org.uimafit.component.JCasCollectionReader_ImplBase;
 import org.uimafit.component.NoOpAnnotator;
 import org.uimafit.component.ViewCreatorAnnotator;
 import org.uimafit.component.ViewTextCopierAnnotator;
-import org.uimafit.descriptor.ConfigurationParameter;
 import org.uimafit.factory.AggregateBuilder;
 import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.factory.CollectionReaderFactory;
@@ -53,10 +46,8 @@ import org.uimafit.pipeline.JCasIterable;
 import org.uimafit.pipeline.SimplePipeline;
 import org.uimafit.util.JCasUtil;
 
-import com.google.common.base.Charsets;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
-import com.google.common.io.Files;
 
 import edu.mayo.bmi.uima.core.ae.SentenceDetector;
 import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
@@ -153,22 +144,23 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
 
   @Override
   protected CollectionReader getCollectionReader(List<Integer> patientSets) throws Exception {
-    List<String> paths = new ArrayList<String>();
+    List<File> files = new ArrayList<File>();
     for (Integer set : patientSets) {
       File setTextDirectory = new File(this.rawTextDirectory, "doc" + set);
       for (File file : setTextDirectory.listFiles()) {
-        paths.add(file.getPath());
+        files.add(file);
       }
     }
     return CollectionReaderFactory.createCollectionReader(
-        FilesCollectionReader.class,
-        FilesCollectionReader.PARAM_FILES,
-        paths);
+        UriCollectionReader.class,
+        UriCollectionReader.PARAM_FILES,
+        files);
   }
 
   @Override
   protected void train(CollectionReader collectionReader, File directory) throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
+    aggregateBuilder.add(UriToDocumentTextAnnotator.getDescription());
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         KnowtatorXMLReader.class,
         KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
@@ -197,6 +189,7 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
   @Override
   protected Statistics test(CollectionReader collectionReader, File directory) throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
+    aggregateBuilder.add(UriToDocumentTextAnnotator.getDescription());
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         ViewCreatorAnnotator.class,
         ViewCreatorAnnotator.PARAM_VIEW_NAME,
@@ -276,41 +269,4 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
     }
 
   }
-
-  public static class FilesCollectionReader extends JCasCollectionReader_ImplBase {
-
-    public static final String PARAM_FILES = "files";
-
-    @ConfigurationParameter(name = PARAM_FILES, mandatory = true)
-    private List<File> files;
-
-    private int fileIndex;
-
-    @Override
-    public void initialize(UimaContext context) throws ResourceInitializationException {
-      super.initialize(context);
-      this.fileIndex = 0;
-    }
-
-    @Override
-    public boolean hasNext() throws IOException, CollectionException {
-      return this.fileIndex < this.files.size();
-    }
-
-    @Override
-    public Progress[] getProgress() {
-      return new Progress[] { new ProgressImpl(this.fileIndex, this.files.size(), Progress.ENTITIES) };
-    }
-
-    @Override
-    public void getNext(JCas jCas) throws IOException, CollectionException {
-      File file = this.files.get(this.fileIndex);
-      String text = Files.toString(file, Charsets.US_ASCII);
-      jCas.setDocumentText(text);
-      ViewURIUtil.setURI(jCas, file.toURI());
-      ++this.fileIndex;
-    }
-
-  }
-
 }
