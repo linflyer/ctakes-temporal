@@ -68,7 +68,9 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
     File knowtatorFile = new File(new File(this.knowtatorXMLDirectory, subDir), fileName);
 
     // parse the Knowtator XML file into annotation objects
-    KnowtatorXMLParser parser = new KnowtatorXMLParser("consensus set annotator team");
+    KnowtatorXMLParser parser = new KnowtatorXMLParser(
+        "consensus set annotator team",
+        "consensus set_rel annotator team");
     Collection<KnowtatorAnnotation> annotations;
     try {
       annotations = parser.parse(knowtatorFile);

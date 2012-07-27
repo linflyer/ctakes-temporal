@@ -37,11 +37,14 @@ public class KnowtatorXMLParser {
     Element annotationsElem = new SAXBuilder().build(knowtatorXMLFile).getRootElement();
 
     // parse <annotation> elements
+    Set<String> ignoredAnnotators = new HashSet<String>();
     Map<String, KnowtatorAnnotation> annotations = new HashMap<String, KnowtatorAnnotation>();
     for (Element annotationElem : annotationsElem.getChildren("annotation")) {
       for (Element annotatorElem : this.getChild(annotationElem, "annotator")) {
         String annotatorName = annotatorElem.getText();
-        if (this.annotatorNames.contains(annotatorName)) {
+        if (!this.annotatorNames.contains(annotatorName)) {
+          ignoredAnnotators.add(annotatorName);
+        } else {
           for (Element mentionElem : this.getChild(annotationElem, "mention")) {
             for (String id : this.getAttributeValue(mentionElem, "id")) {
               KnowtatorAnnotation annotation = new KnowtatorAnnotation();
@@ -65,6 +68,7 @@ public class KnowtatorXMLParser {
         }
       }
     }
+    LOGGER.fine(String.format("Ignored annotators %s in %s", ignoredAnnotators, knowtatorXMLFile));
 
     // parse <stringSlotMention> elements
     Map<String, Slot<String>> stringSlots = new HashMap<String, Slot<String>>();
