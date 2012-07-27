@@ -55,5 +55,10 @@
 			<artifactId>cleartk-timeml</artifactId>
 			<version>1.0.2-SNAPSHOT</version>
 		</dependency>
+		<dependency>
+			<groupId>com.lexicalscope.jewelcli</groupId>
+			<artifactId>jewelcli</artifactId>
+			<version>0.8.3</version>
+		</dependency>
 	</dependencies>
 </project>

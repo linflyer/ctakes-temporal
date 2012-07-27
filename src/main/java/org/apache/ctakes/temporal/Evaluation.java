@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.ctakes.temporal.Evaluation.Statistics;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -47,6 +45,8 @@ import org.uimafit.util.JCasUtil;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import com.lexicalscope.jewel.cli.CliFactory;
+import com.lexicalscope.jewel.cli.Option;
 
 import edu.mayo.bmi.uima.core.ae.SentenceDetector;
 import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
@@ -66,30 +66,30 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
 
   private static final String GOLD_VIEW_NAME = "GoldView";
 
+  interface Options {
+
+    @Option(longName = "text")
+    public File getRawTextDirectory();
+
+    @Option(longName = "xml")
+    public File getKnowtatorXMLDirectory();
+
+    @Option(longName = "patients")
+    public CommandLine.IntegerRanges getPatients();
+  }
+
   public static void main(String[] args) throws Exception {
     // parse command line arguments
-    File rawTextDirectory = new File(args[0]);
-    File knowtatorXMLDirectory = new File(args[1]);
-    String setsDescription = args[2];
-    List<Integer> patientSets = new ArrayList<Integer>();
-    for (String part : setsDescription.split("\\s*,\\s*")) {
-      Matcher matcher = Pattern.compile("(\\d+)-(\\d+)").matcher(part);
-      if (matcher.matches()) {
-        int begin = Integer.parseInt(matcher.group(1));
-        int end = Integer.parseInt(matcher.group(2));
-        for (int i = begin; i <= end; ++i) {
-          patientSets.add(i);
-        }
-      } else {
-        patientSets.add(Integer.parseInt(part));
-      }
-    }
+    Options options = CliFactory.parseArguments(Options.class, args);
+    File rawTextDirectory = options.getRawTextDirectory();
+    File knowtatorXMLDirectory = options.getKnowtatorXMLDirectory();
+    List<Integer> patientSets = options.getPatients().getList();
 
     Evaluation evaluation = new Evaluation(
         new File("target/eval"),
         rawTextDirectory,
         knowtatorXMLDirectory);
-    List<Statistics> foldStats = evaluation.crossValidation(patientSets, 3);
+    List<Statistics> foldStats = evaluation.crossValidation(patientSets, 4);
     for (Statistics stats : foldStats) {
       System.err.println("EVENTS");
       System.err.println(stats.events);
