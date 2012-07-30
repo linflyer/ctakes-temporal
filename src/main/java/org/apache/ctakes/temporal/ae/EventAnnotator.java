@@ -1,4 +1,4 @@
-package org.apache.ctakes.temporal;
+package org.apache.ctakes.temporal.ae;
 
 import java.io.File;
 import java.util.ArrayList;

@@ -1,4 +1,4 @@
-package org.apache.ctakes.temporal.scripts;
+package org.apache.ctakes.temporal.eval;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -9,8 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.ctakes.temporal.CommandLine;
-import org.apache.ctakes.temporal.KnowtatorXMLReader;
+import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;

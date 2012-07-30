@@ -1,4 +1,4 @@
-package org.apache.ctakes.temporal;
+package org.apache.ctakes.temporal.eval;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -6,7 +6,10 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.ctakes.temporal.Evaluation.Statistics;
+import org.apache.ctakes.temporal.ae.EventAnnotator;
+import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
+import org.apache.ctakes.temporal.eval.CommandLine.IntegerRanges;
+import org.apache.ctakes.temporal.eval.Evaluation.Statistics;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
