@@ -16,10 +16,7 @@ import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.util.CasCopier;
-import org.cleartk.classifier.CleartkAnnotator;
-import org.cleartk.classifier.jar.DefaultDataWriterFactory;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
-import org.cleartk.classifier.jar.JarClassifierFactory;
 import org.cleartk.classifier.opennlp.MaxentDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.cleartk.eval.Evaluation_ImplBase;
@@ -167,13 +164,8 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
         SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
     aggregateBuilder.add(sentenceDetector);
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        EventAnnotator.class,
-        CleartkAnnotator.PARAM_IS_TRAINING,
-        true,
-        DefaultDataWriterFactory.PARAM_DATA_WRITER_CLASS_NAME,
+    aggregateBuilder.add(EventAnnotator.createDataWriterDescription(
         MaxentDataWriter.class,
-        DefaultDataWriterFactory.PARAM_OUTPUT_DIRECTORY,
         directory));
     SimplePipeline.runPipeline(collectionReader, aggregateBuilder.createAggregate());
     JarClassifierBuilder.trainAndPackage(directory, "2000", "5");
@@ -207,12 +199,7 @@ public class Evaluation extends Evaluation_ImplBase<Integer, Statistics> {
         SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
     aggregateBuilder.add(sentenceDetector);
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        EventAnnotator.class,
-        CleartkAnnotator.PARAM_IS_TRAINING,
-        false,
-        JarClassifierFactory.PARAM_CLASSIFIER_JAR_PATH,
-        new File(directory, "model.jar")));
+    aggregateBuilder.add(EventAnnotator.createAnnotatorDescription(directory));
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         NoOpAnnotator.class,
         TypeSystemDescriptionFactory.createTypeSystemDescription("org.cleartk.TypeSystem")));
