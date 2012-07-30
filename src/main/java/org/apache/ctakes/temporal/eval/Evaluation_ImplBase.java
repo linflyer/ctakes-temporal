@@ -9,7 +9,6 @@ import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.cas.TOP;
-import org.cleartk.eval.AnnotationStatistics;
 import org.cleartk.util.ae.UriToDocumentTextAnnotator;
 import org.cleartk.util.cr.UriCollectionReader;
 import org.uimafit.component.ViewCreatorAnnotator;
@@ -25,8 +24,8 @@ import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
 import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
 
-public abstract class Evaluation_ImplBase extends
-    org.cleartk.eval.Evaluation_ImplBase<Integer, AnnotationStatistics> {
+public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
+    org.cleartk.eval.Evaluation_ImplBase<Integer, STATISTICS_TYPE> {
 
   protected final String GOLD_VIEW_NAME = "GoldView";
 
@@ -59,7 +58,7 @@ public abstract class Evaluation_ImplBase extends
     this.patientSets = patientSets;
   }
 
-  public List<AnnotationStatistics> crossValidation(int nFolds) throws Exception {
+  public List<STATISTICS_TYPE> crossValidation(int nFolds) throws Exception {
     return this.crossValidation(this.patientSets, nFolds);
   }
 

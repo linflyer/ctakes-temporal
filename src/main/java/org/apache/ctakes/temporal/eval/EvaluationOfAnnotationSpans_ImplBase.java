@@ -21,7 +21,8 @@ import org.uimafit.util.JCasUtil;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
-public abstract class EvaluationOfAnnotationSpans_ImplBase extends Evaluation_ImplBase {
+public abstract class EvaluationOfAnnotationSpans_ImplBase extends
+    Evaluation_ImplBase<AnnotationStatistics> {
 
   private Multiset<String> goldTexts, systemTexts;
 
