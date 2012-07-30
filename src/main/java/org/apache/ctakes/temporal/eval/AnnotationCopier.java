@@ -5,7 +5,7 @@ import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CASException;
 import org.apache.uima.cas.Feature;
 import org.apache.uima.jcas.JCas;
-import org.apache.uima.jcas.tcas.Annotation;
+import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.apache.uima.util.CasCopier;
 import org.uimafit.component.JCasAnnotator_ImplBase;
@@ -18,7 +18,7 @@ public class AnnotationCopier extends JCasAnnotator_ImplBase {
   public static AnalysisEngineDescription getDescription(
       String sourceView,
       String targetView,
-      Class<? extends Annotation> annotationClass) throws ResourceInitializationException {
+      Class<? extends TOP> annotationClass) throws ResourceInitializationException {
     return AnalysisEngineFactory.createPrimitiveDescription(
         AnnotationCopier.class,
         PARAM_SOURCE_VIEW,
@@ -42,7 +42,7 @@ public class AnnotationCopier extends JCasAnnotator_ImplBase {
   public static final String PARAM_ANNOTATION_CLASS = "AnnotationClass";
 
   @ConfigurationParameter(name = PARAM_ANNOTATION_CLASS, mandatory = true)
-  private Class<? extends Annotation> annotationClass;
+  private Class<? extends TOP> annotationClass;
 
   @Override
   public void process(JCas jCas) throws AnalysisEngineProcessException {
@@ -54,8 +54,8 @@ public class AnnotationCopier extends JCasAnnotator_ImplBase {
       throw new AnalysisEngineProcessException(e);
     }
     CasCopier copier = new CasCopier(sourceView.getCas(), targetView.getCas());
-    for (Annotation annotation : JCasUtil.select(sourceView, this.annotationClass)) {
-      Annotation copy = (Annotation) copier.copyFs(annotation);
+    for (TOP annotation : JCasUtil.select(sourceView, this.annotationClass)) {
+      TOP copy = (TOP) copier.copyFs(annotation);
       Feature sofaFeature = copy.getType().getFeatureByBaseName("sofa");
       copy.setFeatureValue(sofaFeature, targetView.getSofa());
       copy.addToIndexes();

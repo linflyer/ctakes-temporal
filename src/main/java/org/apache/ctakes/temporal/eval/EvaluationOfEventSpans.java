@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.ctakes.temporal.ae.EventAnnotator;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.jcas.JCas;
+import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
@@ -60,8 +61,8 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
   }
 
   @Override
-  protected List<Class<? extends Annotation>> getAnnotationClassesThatShouldBeGoldAtTestTime() {
-    List<Class<? extends Annotation>> result = super.getAnnotationClassesThatShouldBeGoldAtTestTime();
+  protected List<Class<? extends TOP>> getAnnotationClassesThatShouldBeGoldAtTestTime() {
+    List<Class<? extends TOP>> result = super.getAnnotationClassesThatShouldBeGoldAtTestTime();
     result.add(EntityMention.class);
     return result;
   }

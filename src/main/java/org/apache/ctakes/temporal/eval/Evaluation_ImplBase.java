@@ -8,7 +8,7 @@ import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.collection.CollectionReader;
-import org.apache.uima.jcas.tcas.Annotation;
+import org.apache.uima.jcas.cas.TOP;
 import org.cleartk.eval.AnnotationStatistics;
 import org.cleartk.util.ae.UriToDocumentTextAnnotator;
 import org.cleartk.util.cr.UriCollectionReader;
@@ -83,8 +83,8 @@ public abstract class Evaluation_ImplBase extends
     return this.getPreprocessorDescription(PipelineType.TEST);
   }
 
-  protected List<Class<? extends Annotation>> getAnnotationClassesThatShouldBeGoldAtTestTime() {
-    return new ArrayList<Class<? extends Annotation>>();
+  protected List<Class<? extends TOP>> getAnnotationClassesThatShouldBeGoldAtTestTime() {
+    return new ArrayList<Class<? extends TOP>>();
   }
 
   private static enum PipelineType {
@@ -114,7 +114,7 @@ public abstract class Evaluation_ImplBase extends
             KnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory),
             CAS.NAME_DEFAULT_SOFA,
             GOLD_VIEW_NAME);
-        for (Class<? extends Annotation> annotationClass : this.getAnnotationClassesThatShouldBeGoldAtTestTime()) {
+        for (Class<? extends TOP> annotationClass : this.getAnnotationClassesThatShouldBeGoldAtTestTime()) {
           aggregateBuilder.add(AnnotationCopier.getDescription(
               GOLD_VIEW_NAME,
               CAS.NAME_DEFAULT_SOFA,
