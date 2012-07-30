@@ -1,14 +1,17 @@
 package org.apache.ctakes.temporal;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.apache.uima.UimaContext;
+import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.classifier.CleartkAnnotator;
+import org.cleartk.classifier.DataWriter;
 import org.cleartk.classifier.Feature;
 import org.cleartk.classifier.Instance;
 import org.cleartk.classifier.chunking.BIOChunking;
@@ -20,6 +23,9 @@ import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternE
 import org.cleartk.classifier.feature.extractor.simple.CoveredTextExtractor;
 import org.cleartk.classifier.feature.extractor.simple.SimpleFeatureExtractor;
 import org.cleartk.classifier.feature.extractor.simple.TypePathExtractor;
+import org.cleartk.classifier.jar.DefaultDataWriterFactory;
+import org.cleartk.classifier.jar.JarClassifierFactory;
+import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.util.JCasUtil;
 
 import edu.mayo.bmi.uima.core.type.syntax.BaseToken;
@@ -28,6 +34,29 @@ import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 import edu.mayo.bmi.uima.core.type.textspan.Sentence;
 
 public class EventAnnotator extends CleartkAnnotator<String> {
+
+  public static AnalysisEngineDescription createDataWriterDescription(
+      Class<? extends DataWriter<String>> dataWriterClass,
+      File outputDirectory) throws ResourceInitializationException {
+    return AnalysisEngineFactory.createPrimitiveDescription(
+        EventAnnotator.class,
+        CleartkAnnotator.PARAM_IS_TRAINING,
+        true,
+        DefaultDataWriterFactory.PARAM_DATA_WRITER_CLASS_NAME,
+        dataWriterClass,
+        DefaultDataWriterFactory.PARAM_OUTPUT_DIRECTORY,
+        outputDirectory);
+  }
+
+  public static AnalysisEngineDescription createAnnotatorDescription(File modelDirectory)
+      throws ResourceInitializationException {
+    return AnalysisEngineFactory.createPrimitiveDescription(
+        EventAnnotator.class,
+        CleartkAnnotator.PARAM_IS_TRAINING,
+        false,
+        JarClassifierFactory.PARAM_CLASSIFIER_JAR_PATH,
+        new File(modelDirectory, "model.jar"));
+  }
 
   protected List<SimpleFeatureExtractor> tokenFeatureExtractors;
 
