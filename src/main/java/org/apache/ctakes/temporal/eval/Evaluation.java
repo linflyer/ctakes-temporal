@@ -8,7 +8,6 @@ import java.util.List;
 
 import org.apache.ctakes.temporal.ae.EventAnnotator;
 import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
-import org.apache.ctakes.temporal.eval.CommandLine.IntegerRanges;
 import org.apache.ctakes.temporal.eval.Evaluation.Statistics;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
