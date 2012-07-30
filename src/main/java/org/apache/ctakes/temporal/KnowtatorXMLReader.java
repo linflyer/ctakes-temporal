@@ -108,7 +108,11 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
         // convert negation to an integer
         Boolean negation = booleanSlots.remove("Negation");
-        entityMention.setPolarity(negation == null ? +1 : negation == true ? -1 : +1);
+        entityMention.setPolarity(negation == null
+            ? CONST.NE_POLARITY_NEGATION_ABSENT
+            : negation == true
+                ? CONST.NE_POLARITY_NEGATION_PRESENT
+                : CONST.NE_POLARITY_NEGATION_ABSENT);
 
         // convert status as necessary
         String status = stringSlots.remove("Status");
