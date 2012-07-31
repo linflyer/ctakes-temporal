@@ -152,23 +152,39 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
       } else if ("EVENT".equals(annotation.type)) {
 
-        // collect the event properties
+        // collect the event properties (setting defaults as necessary)
         EventProperties eventProperties = new EventProperties(jCas);
         eventProperties.setCategory(stringSlots.remove("type"));
+        if (eventProperties.getCategory() == null) {
+          eventProperties.setCategory("N/A");
+        }
         eventProperties.setContextualModality(stringSlots.remove("contextualmoduality"));
+        if (eventProperties.getContextualModality() == null) {
+          eventProperties.setContextualModality("ACTUAL");
+        }
         eventProperties.setContextualAspect(stringSlots.remove("contextualaspect"));
+        if (eventProperties.getContextualAspect() == null) {
+          eventProperties.setContextualAspect("N/A");
+        }
         eventProperties.setDegree(stringSlots.remove("degree"));
+        if (eventProperties.getDegree() == null) {
+          eventProperties.setDegree("N/A");
+        }
         eventProperties.setDocTimeRel(stringSlots.remove("DocTimeRel"));
         if (eventProperties.getDocTimeRel() == null) {
-          eventProperties.setDocTimeRel("BEFORE");
+          // TODO: this should not be necessary - DocTimeRel should always be specified
+          eventProperties.setDocTimeRel("OVERLAP");
         }
         eventProperties.setPermanence(stringSlots.remove("permanence"));
+        if (eventProperties.getPermanence() == null) {
+          eventProperties.setPermanence("UNDETERMINED");
+        }
         String polarityStr = stringSlots.remove("polarity");
         int polarity;
         if (polarityStr == null || polarityStr.equals("POS")) {
-          polarity = +1;
+          polarity = CONST.NE_POLARITY_NEGATION_ABSENT;
         } else if (polarityStr.equals("NEG")) {
-          polarity = -1;
+          polarity = CONST.NE_POLARITY_NEGATION_PRESENT;
         } else {
           throw new IllegalArgumentException("Invalid polarity: " + polarityStr);
         }
