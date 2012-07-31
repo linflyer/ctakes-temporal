@@ -4,7 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
+import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.collection.CollectionReader;

@@ -1,4 +1,4 @@
-package org.apache.ctakes.temporal.ae;
+package org.apache.ctakes.sharp.ae;
 
 import java.io.File;
 import java.io.IOException;

@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.ctakes.temporal.ae.KnowtatorXMLReader;
+import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
