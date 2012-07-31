@@ -40,10 +40,8 @@ public class EvaluationOfTimeSpans extends EvaluationOfAnnotationSpans_ImplBase 
     }
     System.err.println("OVERALL");
     System.err.println(AnnotationStatistics.addAll(foldStats));
-    System.err.println("Gold:");
-    evaluation.printGoldAnnotationTexts();
-    System.err.println("System:");
-    evaluation.printSystemAnnotationTexts();
+    evaluation.writeGoldAnnotationTexts(new File("target/eval/times-only-in-gold.txt"));
+    evaluation.writeSystemAnnotationTexts(new File("target/eval/times-only-in-system.txt"));
   }
 
   public EvaluationOfTimeSpans(

@@ -1,10 +1,14 @@
 package org.apache.ctakes.temporal.eval;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.cas.CAS;
@@ -71,25 +75,39 @@ public abstract class EvaluationOfAnnotationSpans_ImplBase extends
       Collection<? extends Annotation> goldAnnotations = this.getGoldAnnotations(goldView);
       Collection<? extends Annotation> systemAnnotations = this.getSystemAnnotations(systemView);
       stats.add(goldAnnotations, systemAnnotations);
-      this.goldTexts.addAll(JCasUtil.toText(goldAnnotations));
-      this.systemTexts.addAll(JCasUtil.toText(systemAnnotations));
+      Set<String> goldTexts = new HashSet<String>(JCasUtil.toText(goldAnnotations));
+      Set<String> systemTexts = new HashSet<String>(JCasUtil.toText(systemAnnotations));
+      Set<String> goldOnly = new HashSet<String>();
+      goldOnly.addAll(goldTexts);
+      goldOnly.removeAll(systemTexts);
+      Set<String> systemOnly = new HashSet<String>();
+      systemOnly.addAll(systemTexts);
+      systemOnly.removeAll(goldTexts);
+      this.goldTexts.addAll(goldOnly);
+      this.systemTexts.addAll(systemOnly);
     }
     return stats;
   }
 
-  public void printGoldAnnotationTexts() {
-    this.printAnnotationTexts(this.goldTexts);
+  public void writeGoldAnnotationTexts(File file) throws FileNotFoundException {
+    this.printAnnotationTexts(this.goldTexts, file);
   }
 
-  public void printSystemAnnotationTexts() {
-    this.printAnnotationTexts(this.systemTexts);
+  public void writeSystemAnnotationTexts(File file) throws FileNotFoundException {
+    this.printAnnotationTexts(this.systemTexts, file);
   }
 
-  private void printAnnotationTexts(Multiset<String> multiset) {
-    List<String> keys = new ArrayList<String>(multiset.elementSet());
-    Collections.sort(keys);
-    for (String key : keys) {
-      System.err.printf("%4d %s\n", multiset.count(key), key);
+  private void printAnnotationTexts(Multiset<String> multiset, File file)
+      throws FileNotFoundException {
+    PrintWriter writer = new PrintWriter(file);
+    try {
+      List<String> keys = new ArrayList<String>(multiset.elementSet());
+      Collections.sort(keys);
+      for (String key : keys) {
+        writer.printf("%2d %s\n", multiset.count(key), key);
+      }
+    } finally {
+      writer.close();
     }
   }
 }
