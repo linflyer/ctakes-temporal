@@ -11,7 +11,7 @@ import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
-import org.cleartk.classifier.opennlp.MaxentDataWriter;
+import org.cleartk.classifier.libsvm.MultiClassLIBSVMDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.uimafit.util.JCasUtil;
 
@@ -50,12 +50,12 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
   @Override
   protected AnalysisEngineDescription getDataWriterDescription(File directory)
       throws ResourceInitializationException {
-    return EventAnnotator.createDataWriterDescription(MaxentDataWriter.class, directory);
+    return EventAnnotator.createDataWriterDescription(MultiClassLIBSVMDataWriter.class, directory);
   }
 
   @Override
   protected void trainAndPackage(File directory) throws Exception {
-    JarClassifierBuilder.trainAndPackage(directory, "2000", "5");
+    JarClassifierBuilder.trainAndPackage(directory, "-c", "10000");
   }
 
   @Override
