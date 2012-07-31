@@ -2,6 +2,7 @@ package org.apache.ctakes.temporal.eval;
 
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
+import org.apache.uima.cas.CAS;
 import org.apache.uima.cas.CASException;
 import org.apache.uima.cas.Feature;
 import org.apache.uima.jcas.JCas;
@@ -56,8 +57,13 @@ public class AnnotationCopier extends JCasAnnotator_ImplBase {
     CasCopier copier = new CasCopier(sourceView.getCas(), targetView.getCas());
     for (TOP annotation : JCasUtil.select(sourceView, this.annotationClass)) {
       TOP copy = (TOP) copier.copyFs(annotation);
-      Feature sofaFeature = copy.getType().getFeatureByBaseName("sofa");
-      copy.setFeatureValue(sofaFeature, targetView.getSofa());
+      // CasCopier does not change sofa of annotation; without the code below, you get the error:
+      // the Annotation "..." is over view "GoldView" and cannot be added to indexes associated
+      // with the different view "_InitialView".
+      Feature sofaFeature = copy.getType().getFeatureByBaseName(CAS.FEATURE_BASE_NAME_SOFA);
+      if (sofaFeature != null) {
+        copy.setFeatureValue(sofaFeature, targetView.getSofa());
+      }
       copy.addToIndexes();
     }
 

@@ -159,6 +159,9 @@ public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         eventProperties.setContextualAspect(stringSlots.remove("contextualaspect"));
         eventProperties.setDegree(stringSlots.remove("degree"));
         eventProperties.setDocTimeRel(stringSlots.remove("DocTimeRel"));
+        if (eventProperties.getDocTimeRel() == null) {
+          eventProperties.setDocTimeRel("BEFORE");
+        }
         eventProperties.setPermanence(stringSlots.remove("permanence"));
         String polarityStr = stringSlots.remove("polarity");
         int polarity;

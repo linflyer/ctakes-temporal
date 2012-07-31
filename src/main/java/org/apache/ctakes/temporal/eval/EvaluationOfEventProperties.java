@@ -15,7 +15,7 @@ import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.TOP;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
-import org.cleartk.classifier.opennlp.MaxentDataWriter;
+import org.cleartk.classifier.libsvm.MultiClassLIBSVMDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.factory.AggregateBuilder;
@@ -27,7 +27,6 @@ import org.uimafit.util.JCasUtil;
 import com.google.common.base.Function;
 import com.lexicalscope.jewel.cli.CliFactory;
 
-import edu.mayo.bmi.uima.core.type.refsem.Event;
 import edu.mayo.bmi.uima.core.type.refsem.EventProperties;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 
@@ -81,8 +80,6 @@ public class EvaluationOfEventProperties extends
   protected List<Class<? extends TOP>> getAnnotationClassesThatShouldBeGoldAtTestTime() {
     List<Class<? extends TOP>> result = super.getAnnotationClassesThatShouldBeGoldAtTestTime();
     result.add(EventMention.class);
-    result.add(Event.class);
-    result.add(EventProperties.class);
     return result;
   }
 
@@ -91,10 +88,10 @@ public class EvaluationOfEventProperties extends
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(this.getPreprocessorTrainDescription());
     aggregateBuilder.add(DocTimeRelAnnotator.createDataWriterDescription(
-        MaxentDataWriter.class,
+        MultiClassLIBSVMDataWriter.class,
         directory));
     SimplePipeline.runPipeline(collectionReader, aggregateBuilder.createAggregate());
-    JarClassifierBuilder.trainAndPackage(directory);
+    JarClassifierBuilder.trainAndPackage(directory, "-c", "1000");
   }
 
   @Override
@@ -134,8 +131,9 @@ public class EvaluationOfEventProperties extends
     return new Function<EventMention, String>() {
       @Override
       public String apply(EventMention eventMention) {
-        Feature feature = eventMention.getType().getFeatureByBaseName(propertyName);
-        return eventMention.getEvent().getProperties().getFeatureValueAsString(feature);
+        EventProperties eventProperties = eventMention.getEvent().getProperties();
+        Feature feature = eventProperties.getType().getFeatureByBaseName(propertyName);
+        return eventProperties.getFeatureValueAsString(feature);
       }
     };
   }
