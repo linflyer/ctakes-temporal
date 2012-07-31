@@ -16,7 +16,9 @@ import org.cleartk.classifier.feature.extractor.ContextExtractor;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Covered;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Following;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Preceding;
+import org.cleartk.classifier.feature.extractor.simple.CombinedExtractor;
 import org.cleartk.classifier.feature.extractor.simple.CoveredTextExtractor;
+import org.cleartk.classifier.feature.extractor.simple.TypePathExtractor;
 import org.cleartk.classifier.jar.DefaultDataWriterFactory;
 import org.cleartk.classifier.jar.JarClassifierFactory;
 import org.uimafit.factory.AnalysisEngineFactory;
@@ -55,9 +57,12 @@ public class DocTimeRelAnnotator extends CleartkAnnotator<String> {
   @Override
   public void initialize(UimaContext context) throws ResourceInitializationException {
     super.initialize(context);
+    CombinedExtractor baseExtractor = new CombinedExtractor(
+        new CoveredTextExtractor(),
+        new TypePathExtractor(BaseToken.class, "partOfSpeech"));
     this.contextExtractor = new ContextExtractor<BaseToken>(
         BaseToken.class,
-        new CoveredTextExtractor(),
+        baseExtractor,
         new Preceding(3),
         new Covered(),
         new Following(3));

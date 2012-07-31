@@ -23,6 +23,7 @@ import edu.mayo.bmi.uima.core.ae.SentenceDetector;
 import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
 import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
+import edu.mayo.bmi.uima.pos_tagger.POSTagger;
 
 public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     org.cleartk.eval.Evaluation_ImplBase<Integer, STATISTICS_TYPE> {
@@ -130,6 +131,14 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
     aggregateBuilder.add(sentenceDetector);
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        POSTagger.class,
+        POSTagger.POS_MODEL_FILE_PARAM,
+        "models/mayo-pos.zip",
+        POSTagger.TAG_DICTIONARY_PARAM,
+        "models/tag.dictionary.txt",
+        POSTagger.CASE_SENSITIVE_PARAM,
+        true));
     return aggregateBuilder.createAggregateDescription();
   }
 }
