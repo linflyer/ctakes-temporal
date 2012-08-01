@@ -3,6 +3,7 @@ package org.apache.ctakes.temporal.eval;
 import java.io.File;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.apache.ctakes.temporal.ae.EventAnnotator;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -29,14 +30,13 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
         options.getRawTextDirectory(),
         options.getKnowtatorXMLDirectory(),
         options.getPatients().getList());
+    evaluation.setLogging(Level.FINE, new File("target/eval/event-errors.log"));
     List<AnnotationStatistics> foldStats = evaluation.crossValidation(4);
     for (AnnotationStatistics stats : foldStats) {
       System.err.println(stats);
     }
     System.err.println("OVERALL");
     System.err.println(AnnotationStatistics.addAll(foldStats));
-    evaluation.writeGoldAnnotationTexts(new File("target/eval/events-only-in-gold.txt"));
-    evaluation.writeSystemAnnotationTexts(new File("target/eval/events-only-in-system.txt"));
   }
 
   public EvaluationOfEventSpans(

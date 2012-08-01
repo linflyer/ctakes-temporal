@@ -3,6 +3,7 @@ package org.apache.ctakes.temporal.eval;
 import java.io.File;
 import java.util.Collection;
 import java.util.List;
+import java.util.logging.Level;
 
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.jcas.JCas;
@@ -34,14 +35,13 @@ public class EvaluationOfTimeSpans extends EvaluationOfAnnotationSpans_ImplBase 
         options.getRawTextDirectory(),
         options.getKnowtatorXMLDirectory(),
         options.getPatients().getList());
+    evaluation.setLogging(Level.FINE, new File("target/eval/time-errors.log"));
     List<AnnotationStatistics> foldStats = evaluation.crossValidation(4);
     for (AnnotationStatistics stats : foldStats) {
       System.err.println(stats);
     }
     System.err.println("OVERALL");
     System.err.println(AnnotationStatistics.addAll(foldStats));
-    evaluation.writeGoldAnnotationTexts(new File("target/eval/times-only-in-gold.txt"));
-    evaluation.writeSystemAnnotationTexts(new File("target/eval/times-only-in-system.txt"));
   }
 
   public EvaluationOfTimeSpans(
