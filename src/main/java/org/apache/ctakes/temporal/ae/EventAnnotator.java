@@ -20,6 +20,7 @@ import org.cleartk.classifier.feature.extractor.ContextExtractor.Following;
 import org.cleartk.classifier.feature.extractor.ContextExtractor.Preceding;
 import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor;
 import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor.PatternType;
+import org.cleartk.classifier.feature.extractor.simple.CombinedExtractor;
 import org.cleartk.classifier.feature.extractor.simple.CoveredTextExtractor;
 import org.cleartk.classifier.feature.extractor.simple.SimpleFeatureExtractor;
 import org.cleartk.classifier.feature.extractor.simple.TypePathExtractor;
@@ -82,14 +83,17 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     this.tokenFeatureExtractors = new ArrayList<SimpleFeatureExtractor>();
     this.tokenFeatureExtractors.addAll(Arrays.asList(
         new CoveredTextExtractor(),
-        new CharacterCategoryPatternExtractor(PatternType.REPEATS_MERGED),
+        new CharacterCategoryPatternExtractor(PatternType.ONE_PER_CHAR),
         new TypePathExtractor(BaseToken.class, "partOfSpeech")));
 
     // add window of features before and after
+    CombinedExtractor subExtractor = new CombinedExtractor(
+        new CoveredTextExtractor(),
+        new TypePathExtractor(BaseToken.class, "partOfSpeech"));
     this.contextFeatureExtractors = new ArrayList<ContextExtractor<?>>();
     this.contextFeatureExtractors.add(new ContextExtractor<BaseToken>(
         BaseToken.class,
-        new CoveredTextExtractor(),
+        subExtractor,
         new Preceding(3),
         new Following(3)));
   }
