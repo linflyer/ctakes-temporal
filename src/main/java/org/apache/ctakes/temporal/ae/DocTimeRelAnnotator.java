@@ -12,10 +12,10 @@ import org.cleartk.classifier.CleartkAnnotator;
 import org.cleartk.classifier.DataWriter;
 import org.cleartk.classifier.Feature;
 import org.cleartk.classifier.Instance;
-import org.cleartk.classifier.feature.extractor.ContextExtractor;
-import org.cleartk.classifier.feature.extractor.ContextExtractor.Covered;
-import org.cleartk.classifier.feature.extractor.ContextExtractor.Following;
-import org.cleartk.classifier.feature.extractor.ContextExtractor.Preceding;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor.Covered;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor.Following;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor.Preceding;
 import org.cleartk.classifier.feature.extractor.simple.CombinedExtractor;
 import org.cleartk.classifier.feature.extractor.simple.CoveredTextExtractor;
 import org.cleartk.classifier.feature.extractor.simple.TypePathExtractor;
@@ -52,7 +52,7 @@ public class DocTimeRelAnnotator extends CleartkAnnotator<String> {
         new File(modelDirectory, "model.jar"));
   }
 
-  private ContextExtractor<?> contextExtractor;
+  private CleartkExtractor contextExtractor;
 
   @Override
   public void initialize(UimaContext context) throws ResourceInitializationException {
@@ -60,7 +60,7 @@ public class DocTimeRelAnnotator extends CleartkAnnotator<String> {
     CombinedExtractor baseExtractor = new CombinedExtractor(
         new CoveredTextExtractor(),
         new TypePathExtractor(BaseToken.class, "partOfSpeech"));
-    this.contextExtractor = new ContextExtractor<BaseToken>(
+    this.contextExtractor = new CleartkExtractor(
         BaseToken.class,
         baseExtractor,
         new Preceding(3),

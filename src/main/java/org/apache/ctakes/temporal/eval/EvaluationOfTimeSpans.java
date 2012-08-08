@@ -36,8 +36,8 @@ public class EvaluationOfTimeSpans extends EvaluationOfAnnotationSpans_ImplBase 
         options.getKnowtatorXMLDirectory(),
         options.getPatients().getList());
     evaluation.setLogging(Level.FINE, new File("target/eval/time-errors.log"));
-    List<AnnotationStatistics> foldStats = evaluation.crossValidation(4);
-    for (AnnotationStatistics stats : foldStats) {
+    List<AnnotationStatistics<String>> foldStats = evaluation.crossValidation(4);
+    for (AnnotationStatistics<String> stats : foldStats) {
       System.err.println(stats);
     }
     System.err.println("OVERALL");

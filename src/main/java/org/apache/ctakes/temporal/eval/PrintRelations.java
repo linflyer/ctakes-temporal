@@ -26,6 +26,7 @@ import com.lexicalscope.jewel.cli.CliFactory;
 import com.lexicalscope.jewel.cli.Option;
 
 import edu.mayo.bmi.uima.core.type.relation.BinaryTextRelation;
+import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 
 public class PrintRelations {
 
@@ -71,13 +72,17 @@ public class PrintRelations {
       List<BinaryTextRelation> relationList = new ArrayList<BinaryTextRelation>(relations);
       Collections.sort(relationList, BY_RELATION_OFFSETS);
 
-      // print out the relations for visual inspection
-      for (BinaryTextRelation relation : relationList) {
-        Annotation source = relation.getArg1().getArgument();
-        Annotation target = relation.getArg2().getArgument();
-        String type = relation.getCategory();
-        System.err.printf("%s(%s,%s)\n", type, source.getCoveredText(), target.getCoveredText());
+      for (EntityMention entityMention : JCasUtil.select(jCas, EntityMention.class)) {
+        System.err.printf("%s (%s)\n", entityMention.getCoveredText(), entityMention.getTypeID());
       }
+
+      // print out the relations for visual inspection
+      // for (BinaryTextRelation relation : relationList) {
+      // Annotation source = relation.getArg1().getArgument();
+      // Annotation target = relation.getArg2().getArgument();
+      // String type = relation.getCategory();
+      // System.err.printf("%s(%s,%s)\n", type, source.getCoveredText(), target.getCoveredText());
+      // }
       System.err.println();
     }
   }

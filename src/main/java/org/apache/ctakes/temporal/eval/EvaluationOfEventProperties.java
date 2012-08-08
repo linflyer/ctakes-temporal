@@ -15,7 +15,7 @@ import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.TOP;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
-import org.cleartk.classifier.libsvm.MultiClassLIBSVMDataWriter;
+import org.cleartk.classifier.libsvm.LIBSVMStringOutcomeDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.factory.AggregateBuilder;
@@ -31,7 +31,7 @@ import edu.mayo.bmi.uima.core.type.refsem.EventProperties;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 
 public class EvaluationOfEventProperties extends
-    Evaluation_ImplBase<Map<String, AnnotationStatistics>> {
+    Evaluation_ImplBase<Map<String, AnnotationStatistics<String>>> {
 
   private static final String DOC_TIME_REL = "docTimeRel";
 
@@ -44,12 +44,12 @@ public class EvaluationOfEventProperties extends
         options.getRawTextDirectory(),
         options.getKnowtatorXMLDirectory(),
         options.getPatients().getList());
-    List<Map<String, AnnotationStatistics>> foldStats = evaluation.crossValidation(4);
-    Map<String, AnnotationStatistics> overallStats = new HashMap<String, AnnotationStatistics>();
+    List<Map<String, AnnotationStatistics<String>>> foldStats = evaluation.crossValidation(4);
+    Map<String, AnnotationStatistics<String>> overallStats = new HashMap<String, AnnotationStatistics<String>>();
     for (String name : PROPERTY_NAMES) {
-      overallStats.put(name, new AnnotationStatistics());
+      overallStats.put(name, new AnnotationStatistics<String>());
     }
-    for (Map<String, AnnotationStatistics> propertyStats : foldStats) {
+    for (Map<String, AnnotationStatistics<String>> propertyStats : foldStats) {
       for (String key : propertyStats.keySet()) {
         overallStats.get(key).addAll(propertyStats.get(key));
       }
@@ -88,15 +88,16 @@ public class EvaluationOfEventProperties extends
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(this.getPreprocessorTrainDescription());
     aggregateBuilder.add(DocTimeRelAnnotator.createDataWriterDescription(
-        MultiClassLIBSVMDataWriter.class,
+        LIBSVMStringOutcomeDataWriter.class,
         directory));
     SimplePipeline.runPipeline(collectionReader, aggregateBuilder.createAggregate());
     JarClassifierBuilder.trainAndPackage(directory, "-c", "1000");
   }
 
   @Override
-  protected Map<String, AnnotationStatistics> test(CollectionReader collectionReader, File directory)
-      throws Exception {
+  protected Map<String, AnnotationStatistics<String>> test(
+      CollectionReader collectionReader,
+      File directory) throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(this.getPreprocessorTestDescription());
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(ClearEventProperties.class));
@@ -109,8 +110,8 @@ public class EvaluationOfEventProperties extends
       propertyGetters.put(name, getPropertyGetter(name));
     }
 
-    Map<String, AnnotationStatistics> statsMap = new HashMap<String, AnnotationStatistics>();
-    statsMap.put(DOC_TIME_REL, new AnnotationStatistics());
+    Map<String, AnnotationStatistics<String>> statsMap = new HashMap<String, AnnotationStatistics<String>>();
+    statsMap.put(DOC_TIME_REL, new AnnotationStatistics<String>());
     for (JCas jCas : new JCasIterable(collectionReader, aggregateBuilder.createAggregate())) {
       JCas goldView = jCas.getView(GOLD_VIEW_NAME);
       JCas systemView = jCas.getView(CAS.NAME_DEFAULT_SOFA);

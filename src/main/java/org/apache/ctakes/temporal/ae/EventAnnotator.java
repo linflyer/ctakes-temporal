@@ -15,9 +15,9 @@ import org.cleartk.classifier.DataWriter;
 import org.cleartk.classifier.Feature;
 import org.cleartk.classifier.Instance;
 import org.cleartk.classifier.chunking.BIOChunking;
-import org.cleartk.classifier.feature.extractor.ContextExtractor;
-import org.cleartk.classifier.feature.extractor.ContextExtractor.Following;
-import org.cleartk.classifier.feature.extractor.ContextExtractor.Preceding;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor.Following;
+import org.cleartk.classifier.feature.extractor.CleartkExtractor.Preceding;
 import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor;
 import org.cleartk.classifier.feature.extractor.simple.CharacterCategoryPatternExtractor.PatternType;
 import org.cleartk.classifier.feature.extractor.simple.CombinedExtractor;
@@ -61,7 +61,7 @@ public class EventAnnotator extends CleartkAnnotator<String> {
 
   protected List<SimpleFeatureExtractor> tokenFeatureExtractors;
 
-  protected List<ContextExtractor<?>> contextFeatureExtractors;
+  protected List<CleartkExtractor> contextFeatureExtractors;
 
   private BIOChunking<BaseToken, EntityMention> entityChunking;
 
@@ -90,8 +90,8 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     CombinedExtractor subExtractor = new CombinedExtractor(
         new CoveredTextExtractor(),
         new TypePathExtractor(BaseToken.class, "partOfSpeech"));
-    this.contextFeatureExtractors = new ArrayList<ContextExtractor<?>>();
-    this.contextFeatureExtractors.add(new ContextExtractor<BaseToken>(
+    this.contextFeatureExtractors = new ArrayList<CleartkExtractor>();
+    this.contextFeatureExtractors.add(new CleartkExtractor(
         BaseToken.class,
         subExtractor,
         new Preceding(3),
@@ -129,7 +129,7 @@ public class EventAnnotator extends CleartkAnnotator<String> {
           features.addAll(extractor.extract(jCas, token));
         }
         // features from surrounding tokens
-        for (ContextExtractor<?> extractor : this.contextFeatureExtractors) {
+        for (CleartkExtractor extractor : this.contextFeatureExtractors) {
           features.addAll(extractor.extractWithin(jCas, token, sentence));
         }
         // features from surrounding entities

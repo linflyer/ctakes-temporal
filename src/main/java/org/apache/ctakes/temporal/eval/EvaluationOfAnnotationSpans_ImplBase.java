@@ -29,7 +29,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Ordering;
 
 public abstract class EvaluationOfAnnotationSpans_ImplBase extends
-    Evaluation_ImplBase<AnnotationStatistics> {
+    Evaluation_ImplBase<AnnotationStatistics<String>> {
 
   private final Logger logger = Logger.getLogger(this.getClass().getName());
 
@@ -78,13 +78,13 @@ public abstract class EvaluationOfAnnotationSpans_ImplBase extends
   protected abstract Collection<? extends Annotation> getSystemAnnotations(JCas jCas);
 
   @Override
-  protected AnnotationStatistics test(CollectionReader collectionReader, File directory)
+  protected AnnotationStatistics<String> test(CollectionReader collectionReader, File directory)
       throws Exception {
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(this.getPreprocessorTestDescription());
     aggregateBuilder.add(this.getAnnotatorDescription(directory));
 
-    AnnotationStatistics stats = new AnnotationStatistics();
+    AnnotationStatistics<String> stats = new AnnotationStatistics<String>();
     Ordering<Annotation> bySpans = Ordering.<Integer> natural().lexicographical().onResultOf(
         new Function<Annotation, List<Integer>>() {
           @Override

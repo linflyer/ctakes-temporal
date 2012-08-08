@@ -12,7 +12,7 @@ import org.apache.uima.jcas.cas.TOP;
 import org.apache.uima.jcas.tcas.Annotation;
 import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.classifier.jar.JarClassifierBuilder;
-import org.cleartk.classifier.libsvm.MultiClassLIBSVMDataWriter;
+import org.cleartk.classifier.libsvm.LIBSVMStringOutcomeDataWriter;
 import org.cleartk.eval.AnnotationStatistics;
 import org.uimafit.util.JCasUtil;
 
@@ -31,8 +31,8 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
         options.getKnowtatorXMLDirectory(),
         options.getPatients().getList());
     evaluation.setLogging(Level.FINE, new File("target/eval/event-errors.log"));
-    List<AnnotationStatistics> foldStats = evaluation.crossValidation(4);
-    for (AnnotationStatistics stats : foldStats) {
+    List<AnnotationStatistics<String>> foldStats = evaluation.crossValidation(4);
+    for (AnnotationStatistics<String> stats : foldStats) {
       System.err.println(stats);
     }
     System.err.println("OVERALL");
@@ -50,7 +50,9 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
   @Override
   protected AnalysisEngineDescription getDataWriterDescription(File directory)
       throws ResourceInitializationException {
-    return EventAnnotator.createDataWriterDescription(MultiClassLIBSVMDataWriter.class, directory);
+    return EventAnnotator.createDataWriterDescription(
+        LIBSVMStringOutcomeDataWriter.class,
+        directory);
   }
 
   @Override
