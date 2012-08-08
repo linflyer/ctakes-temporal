@@ -1,6 +1,7 @@
 package org.apache.ctakes.temporal.eval;
 
 import java.io.File;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,7 +23,11 @@ import com.lexicalscope.jewel.cli.Option;
 import edu.mayo.bmi.uima.core.ae.SentenceDetector;
 import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
 import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
+import edu.mayo.bmi.uima.core.resource.FileResourceImpl;
+import edu.mayo.bmi.uima.core.resource.JdbcConnectionResourceImpl;
+import edu.mayo.bmi.uima.core.resource.LuceneIndexReaderResourceImpl;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
+import edu.mayo.bmi.uima.lookup.ae.UmlsDictionaryLookupAnnotator;
 import edu.mayo.bmi.uima.pos_tagger.POSTagger;
 
 public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
@@ -139,6 +144,48 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         "models/tag.dictionary.txt",
         POSTagger.CASE_SENSITIVE_PARAM,
         true));
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        UmlsDictionaryLookupAnnotator.class,
+        "UMLSAddr",
+        "https://uts-ws.nlm.nih.gov/restful/isValidUMLSUser",
+        "UMLSVendor",
+        "NLM-6515182895",
+        "UMLSUser",
+        System.getProperty("umls.user"),
+        "UMLSPW",
+        System.getProperty("umls.password"),
+        "LookupDescriptor",
+        ExternalResourceFactory.createExternalResourceDescription(
+            FileResourceImpl.class,
+            getUMLSFile("/lookup/LookupDesc_Db.xml")),
+        "DbConnection",
+        ExternalResourceFactory.createExternalResourceDescription(
+            JdbcConnectionResourceImpl.class,
+            "",
+            "DriverClassName",
+            "org.hsqldb.jdbcDriver",
+            "URL",
+            "jdbc:hsqldb:file:" + getUMLSFile("/lookup/umls2011ab") + "/umls"),
+        "RxnormIndexReader",
+        ExternalResourceFactory.createExternalResourceDescription(
+            LuceneIndexReaderResourceImpl.class,
+            "",
+            "UseMemoryIndex",
+            true,
+            "IndexDirectory",
+            getUMLSFile("/lookup/rxnorm_index")),
+        "OrangeBookIndexReader",
+        ExternalResourceFactory.createExternalResourceDescription(
+            LuceneIndexReaderResourceImpl.class,
+            "",
+            "UseMemoryIndex",
+            true,
+            "IndexDirectory",
+            getUMLSFile("/lookup/OrangeBook"))));
     return aggregateBuilder.createAggregateDescription();
+  }
+
+  private static File getUMLSFile(String path) throws URISyntaxException {
+    return new File(UmlsDictionaryLookupAnnotator.class.getResource(path).toURI());
   }
 }
