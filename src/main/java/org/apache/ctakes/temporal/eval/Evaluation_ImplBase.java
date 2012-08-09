@@ -7,19 +7,28 @@ import java.util.List;
 
 import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
+import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
 import org.apache.uima.collection.CollectionReader;
+import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.TOP;
 import org.cleartk.util.ae.UriToDocumentTextAnnotator;
 import org.cleartk.util.cr.UriCollectionReader;
+import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.component.ViewCreatorAnnotator;
 import org.uimafit.component.ViewTextCopierAnnotator;
 import org.uimafit.factory.AggregateBuilder;
 import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.factory.ExternalResourceFactory;
+import org.uimafit.util.JCasUtil;
 
 import com.lexicalscope.jewel.cli.Option;
 
+import edu.mayo.bmi.uima.adjuster.ChunkAdjuster;
+import edu.mayo.bmi.uima.cdt.ae.ContextDependentTokenizerAnnotator;
+import edu.mayo.bmi.uima.chunker.Chunker;
+import edu.mayo.bmi.uima.chunker.DefaultChunkCreator;
+import edu.mayo.bmi.uima.core.ae.OverlapAnnotator;
 import edu.mayo.bmi.uima.core.ae.SentenceDetector;
 import edu.mayo.bmi.uima.core.ae.SimpleSegmentAnnotator;
 import edu.mayo.bmi.uima.core.ae.TokenizerAnnotatorPTB;
@@ -27,6 +36,8 @@ import edu.mayo.bmi.uima.core.resource.FileResourceImpl;
 import edu.mayo.bmi.uima.core.resource.JdbcConnectionResourceImpl;
 import edu.mayo.bmi.uima.core.resource.LuceneIndexReaderResourceImpl;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
+import edu.mayo.bmi.uima.core.type.syntax.Chunk;
+import edu.mayo.bmi.uima.core.type.textspan.LookupWindowAnnotation;
 import edu.mayo.bmi.uima.lookup.ae.UmlsDictionaryLookupAnnotator;
 import edu.mayo.bmi.uima.pos_tagger.POSTagger;
 
@@ -127,15 +138,20 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         }
         break;
     }
+    // identify segments
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
-    AnalysisEngineDescription sentenceDetector = AnalysisEngineFactory.createPrimitiveDescription(SentenceDetector.class);
-    ExternalResourceFactory.createDependencyAndBind(
-        sentenceDetector,
+    // identify sentences
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        SentenceDetector.class,
         "MaxentModel",
-        SuffixMaxentModelResourceImpl.class,
-        SentenceDetector.class.getResource("/sentdetect/sdmed.mod").toURI().toString());
-    aggregateBuilder.add(sentenceDetector);
+        ExternalResourceFactory.createExternalResourceDescription(
+            SuffixMaxentModelResourceImpl.class,
+            SentenceDetector.class.getResource("/sentdetect/sdmed.mod"))));
+    // identify tokens
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
+    // merge some tokens
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(ContextDependentTokenizerAnnotator.class));
+    // identify part-of-speech tags
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         POSTagger.class,
         POSTagger.POS_MODEL_FILE_PARAM,
@@ -144,6 +160,43 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         "models/tag.dictionary.txt",
         POSTagger.CASE_SENSITIVE_PARAM,
         true));
+    // identify chunks
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        Chunker.class,
+        "ChunkerModelFile",
+        new File(Chunker.class.getResource("/models/chunk-model.claims-1.5.zip").toURI()),
+        "ChunkCreatorClass",
+        DefaultChunkCreator.class));
+    // adjust NP in NP NP to span both
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        ChunkAdjuster.class,
+        "ChunkPattern",
+        new String[] { "NP", "NP" },
+        "IndexOfTokenToInclude",
+        1));
+    // adjust NP in NP PP NP to span all three
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        ChunkAdjuster.class,
+        "ChunkPattern",
+        new String[] { "NP", "PP", "NP" },
+        "IndexOfTokenToInclude",
+        2));
+    // add lookup windows for each NP
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(CopyNPChunksToLookupWindowAnnotations.class));
+    // maximize lookup windows
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+        OverlapAnnotator.class,
+        "A_ObjectClass",
+        LookupWindowAnnotation.class,
+        "B_ObjectClass",
+        LookupWindowAnnotation.class,
+        "OverlapType",
+        "A_ENV_B",
+        "ActionType",
+        "DELETE",
+        "DeleteAction",
+        new String[] { "selector=B" }));
+    // add UMLS on top of lookup windows
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
         UmlsDictionaryLookupAnnotator.class,
         "UMLSAddr",
@@ -187,5 +240,19 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
 
   private static File getUMLSFile(String path) throws URISyntaxException {
     return new File(UmlsDictionaryLookupAnnotator.class.getResource(path).toURI());
+  }
+
+  public static class CopyNPChunksToLookupWindowAnnotations extends JCasAnnotator_ImplBase {
+
+    @Override
+    public void process(JCas jCas) throws AnalysisEngineProcessException {
+      for (Chunk chunk : JCasUtil.select(jCas, Chunk.class)) {
+        if (chunk.getChunkType().equals("NP")) {
+          new LookupWindowAnnotation(jCas, chunk.getBegin(), chunk.getEnd()).addToIndexes();
+        }
+      }
+
+    }
+
   }
 }

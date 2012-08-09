@@ -3,7 +3,9 @@ package org.apache.ctakes.temporal.ae;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -29,6 +31,11 @@ import org.cleartk.classifier.jar.JarClassifierFactory;
 import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.util.JCasUtil;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+
+import edu.mayo.bmi.uima.core.type.constants.CONST;
 import edu.mayo.bmi.uima.core.type.syntax.BaseToken;
 import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
@@ -74,7 +81,8 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     // define chunkings
     this.entityChunking = new BIOChunking<BaseToken, EntityMention>(
         BaseToken.class,
-        EntityMention.class);
+        EntityMention.class,
+        "typeID");
     this.eventChunking = new BIOChunking<BaseToken, EventMention>(
         BaseToken.class,
         EventMention.class);
@@ -115,9 +123,23 @@ public class EventAnnotator extends CleartkAnnotator<String> {
         outcomes = new ArrayList<String>();
       }
 
-      // extract features for all tokens
+      // get BIO entity tags for each entity type
+      int[] entityTypeIDs = new int[] {
+          CONST.NE_TYPE_ID_ANATOMICAL_SITE,
+          CONST.NE_TYPE_ID_DISORDER,
+          CONST.NE_TYPE_ID_DRUG,
+          CONST.NE_TYPE_ID_FINDING,
+          CONST.NE_TYPE_ID_PROCEDURE,
+          CONST.NE_TYPE_ID_UNKNOWN };
       List<EntityMention> entities = JCasUtil.selectCovered(jCas, EntityMention.class, sentence);
-      List<String> tokenEntityTags = this.entityChunking.createOutcomes(jCas, tokens, entities);
+      Map<Integer, List<String>> entityTagsByType = new HashMap<Integer, List<String>>();
+      for (int typeID : entityTypeIDs) {
+        Predicate<EntityMention> hasTypeID = hasEntityType(typeID);
+        List<EntityMention> subEntities = Lists.newArrayList(Iterables.filter(entities, hasTypeID));
+        entityTagsByType.put(typeID, this.entityChunking.createOutcomes(jCas, tokens, subEntities));
+      }
+
+      // extract features for all tokens
       int tokenIndex = -1;
       int window = 2;
       for (BaseToken token : tokens) {
@@ -133,10 +155,14 @@ public class EventAnnotator extends CleartkAnnotator<String> {
           features.addAll(extractor.extractWithin(jCas, token, sentence));
         }
         // features from surrounding entities
-        int begin = Math.max(tokenIndex - window, 0);
-        int end = Math.min(tokenIndex + window, tokenEntityTags.size());
-        for (int i = begin; i < end; ++i) {
-          features.add(new Feature("EntityTag_" + (i - begin), tokenEntityTags.get(i)));
+        for (int typeID : entityTypeIDs) {
+          List<String> tokenEntityTags = entityTagsByType.get(typeID);
+          int begin = Math.max(tokenIndex - window, 0);
+          int end = Math.min(tokenIndex + window, tokenEntityTags.size());
+          for (int i = begin; i < end; ++i) {
+            String name = String.format("EntityTag_%d_%d", typeID, i - begin);
+            features.add(new Feature(name, tokenEntityTags.get(i)));
+          }
         }
         // features from previous classifications
         int nPreviousClassifications = 2;
@@ -162,5 +188,13 @@ public class EventAnnotator extends CleartkAnnotator<String> {
         this.eventChunking.createChunks(jCas, tokens, outcomes);
       }
     }
+  }
+
+  private static Predicate<EntityMention> hasEntityType(final int typeID) {
+    return new Predicate<EntityMention>() {
+      public boolean apply(EntityMention mention) {
+        return mention.getTypeID() == typeID;
+      }
+    };
   }
 }
