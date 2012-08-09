@@ -22,6 +22,7 @@ import org.uimafit.factory.AnalysisEngineFactory;
 import org.uimafit.factory.ExternalResourceFactory;
 import org.uimafit.util.JCasUtil;
 
+import com.google.common.collect.Lists;
 import com.lexicalscope.jewel.cli.Option;
 
 import edu.mayo.bmi.uima.adjuster.ChunkAdjuster;
@@ -37,6 +38,7 @@ import edu.mayo.bmi.uima.core.resource.JdbcConnectionResourceImpl;
 import edu.mayo.bmi.uima.core.resource.LuceneIndexReaderResourceImpl;
 import edu.mayo.bmi.uima.core.resource.SuffixMaxentModelResourceImpl;
 import edu.mayo.bmi.uima.core.type.syntax.Chunk;
+import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textspan.LookupWindowAnnotation;
 import edu.mayo.bmi.uima.lookup.ae.UmlsDictionaryLookupAnnotator;
 import edu.mayo.bmi.uima.pos_tagger.POSTagger;
@@ -138,6 +140,8 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         }
         break;
     }
+    // remove gold mentions if they're there (we'll add cTAKES mentions later instead)
+    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(EntityMentionRemover.class));
     // identify segments
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
     // identify sentences
@@ -251,8 +255,16 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
           new LookupWindowAnnotation(jCas, chunk.getBegin(), chunk.getEnd()).addToIndexes();
         }
       }
-
     }
+  }
 
+  public static class EntityMentionRemover extends JCasAnnotator_ImplBase {
+
+    @Override
+    public void process(JCas jCas) throws AnalysisEngineProcessException {
+      for (EntityMention mention : Lists.newArrayList(JCasUtil.select(jCas, EntityMention.class))) {
+        mention.removeFromIndexes();
+      }
+    }
   }
 }
