@@ -99,14 +99,20 @@ public abstract class EvaluationOfAnnotationSpans_ImplBase extends
       Collection<? extends Annotation> systemAnnotations = this.getSystemAnnotations(systemView);
       stats.add(goldAnnotations, systemAnnotations);
 
-      Set<Annotation> goldOnly = new TreeSet<Annotation>(bySpans);
-      goldOnly.addAll(goldAnnotations);
-      goldOnly.removeAll(systemAnnotations);
-      Set<Annotation> systemOnly = new TreeSet<Annotation>(bySpans);
-      systemOnly.addAll(systemAnnotations);
-      systemOnly.removeAll(goldAnnotations);
-      String text = jCas.getDocumentText().replaceAll("[\r\n]", " ");
+      Set<Annotation> goldSet = new TreeSet<Annotation>(bySpans);
+      goldSet.addAll(goldAnnotations);
+      Set<Annotation> systemSet = new TreeSet<Annotation>(bySpans);
+      systemSet.addAll(systemAnnotations);
 
+      Set<Annotation> goldOnly = new TreeSet<Annotation>(bySpans);
+      goldOnly.addAll(goldSet);
+      goldOnly.removeAll(systemSet);
+
+      Set<Annotation> systemOnly = new TreeSet<Annotation>(bySpans);
+      systemOnly.addAll(systemSet);
+      systemOnly.removeAll(goldSet);
+
+      String text = jCas.getDocumentText().replaceAll("[\r\n]", " ");
       if (!goldOnly.isEmpty() || !systemOnly.isEmpty()) {
         this.logger.fine("Errors in : " + ViewURIUtil.getURI(jCas).toString());
         Set<Annotation> errors = new TreeSet<Annotation>(bySpans);
