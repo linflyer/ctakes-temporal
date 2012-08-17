@@ -3,6 +3,7 @@ package org.apache.ctakes.temporal.eval;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,12 @@ public class EvaluationOfEventProperties extends
       File rawTextDirectory,
       File knowtatorXMLDirectory,
       List<Integer> patientSets) {
-    super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets);
+    super(
+        baseDirectory,
+        rawTextDirectory,
+        knowtatorXMLDirectory,
+        patientSets,
+        EnumSet.of(AnnotatorType.PART_OF_SPEECH_TAGS));
   }
 
   @Override

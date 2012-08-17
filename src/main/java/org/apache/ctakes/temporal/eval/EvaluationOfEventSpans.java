@@ -2,6 +2,7 @@ package org.apache.ctakes.temporal.eval;
 
 import java.io.File;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -44,7 +45,9 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
       File rawTextDirectory,
       File knowtatorXMLDirectory,
       List<Integer> patientSets) {
-    super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets);
+    super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets, EnumSet.of(
+        AnnotatorType.PART_OF_SPEECH_TAGS,
+        AnnotatorType.UMLS_NAMED_ENTITIES));
   }
 
   @Override

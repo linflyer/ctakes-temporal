@@ -52,8 +52,9 @@ public abstract class EvaluationOfAnnotationSpans_ImplBase extends
       File baseDirectory,
       File rawTextDirectory,
       File knowtatorXMLDirectory,
-      List<Integer> patientSets) {
-    super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets);
+      List<Integer> patientSets,
+      Set<AnnotatorType> annotatorFlags) {
+    super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets, annotatorFlags);
   }
 
   protected abstract AnalysisEngineDescription getDataWriterDescription(File directory)

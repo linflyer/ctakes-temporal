@@ -4,6 +4,7 @@ import java.io.File;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -46,6 +47,10 @@ import edu.mayo.bmi.uima.pos_tagger.POSTagger;
 public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     org.cleartk.eval.Evaluation_ImplBase<Integer, STATISTICS_TYPE> {
 
+  public enum AnnotatorType {
+    PART_OF_SPEECH_TAGS, UMLS_NAMED_ENTITIES
+  };
+
   protected final String GOLD_VIEW_NAME = "GoldView";
 
   static interface Options {
@@ -66,15 +71,19 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
 
   protected List<Integer> patientSets;
 
+  private Set<AnnotatorType> annotatorFlags;
+
   public Evaluation_ImplBase(
       File baseDirectory,
       File rawTextDirectory,
       File knowtatorXMLDirectory,
-      List<Integer> patientSets) {
+      List<Integer> patientSets,
+      Set<AnnotatorType> annotatorFlags) {
     super(baseDirectory);
     this.rawTextDirectory = rawTextDirectory;
     this.knowtatorXMLDirectory = knowtatorXMLDirectory;
     this.patientSets = patientSets;
+    this.annotatorFlags = annotatorFlags;
   }
 
   public List<STATISTICS_TYPE> crossValidation(int nFolds) throws Exception {
@@ -140,8 +149,6 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
         }
         break;
     }
-    // remove gold mentions if they're there (we'll add cTAKES mentions later instead)
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(EntityMentionRemover.class));
     // identify segments
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(SimpleSegmentAnnotator.class));
     // identify sentences
@@ -155,90 +162,99 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(TokenizerAnnotatorPTB.class));
     // merge some tokens
     aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(ContextDependentTokenizerAnnotator.class));
-    // identify part-of-speech tags
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        POSTagger.class,
-        POSTagger.POS_MODEL_FILE_PARAM,
-        "models/mayo-pos.zip",
-        POSTagger.TAG_DICTIONARY_PARAM,
-        "models/tag.dictionary.txt",
-        POSTagger.CASE_SENSITIVE_PARAM,
-        true));
-    // identify chunks
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        Chunker.class,
-        "ChunkerModelFile",
-        new File(Chunker.class.getResource("/models/chunk-model.claims-1.5.zip").toURI()),
-        "ChunkCreatorClass",
-        DefaultChunkCreator.class));
-    // adjust NP in NP NP to span both
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        ChunkAdjuster.class,
-        "ChunkPattern",
-        new String[] { "NP", "NP" },
-        "IndexOfTokenToInclude",
-        1));
-    // adjust NP in NP PP NP to span all three
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        ChunkAdjuster.class,
-        "ChunkPattern",
-        new String[] { "NP", "PP", "NP" },
-        "IndexOfTokenToInclude",
-        2));
-    // add lookup windows for each NP
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(CopyNPChunksToLookupWindowAnnotations.class));
-    // maximize lookup windows
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        OverlapAnnotator.class,
-        "A_ObjectClass",
-        LookupWindowAnnotation.class,
-        "B_ObjectClass",
-        LookupWindowAnnotation.class,
-        "OverlapType",
-        "A_ENV_B",
-        "ActionType",
-        "DELETE",
-        "DeleteAction",
-        new String[] { "selector=B" }));
-    // add UMLS on top of lookup windows
-    aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
-        UmlsDictionaryLookupAnnotator.class,
-        "UMLSAddr",
-        "https://uts-ws.nlm.nih.gov/restful/isValidUMLSUser",
-        "UMLSVendor",
-        "NLM-6515182895",
-        "UMLSUser",
-        System.getProperty("umls.user"),
-        "UMLSPW",
-        System.getProperty("umls.password"),
-        "LookupDescriptor",
-        ExternalResourceFactory.createExternalResourceDescription(
-            FileResourceImpl.class,
-            getUMLSFile("/lookup/LookupDesc_Db.xml")),
-        "DbConnection",
-        ExternalResourceFactory.createExternalResourceDescription(
-            JdbcConnectionResourceImpl.class,
-            "",
-            "DriverClassName",
-            "org.hsqldb.jdbcDriver",
-            "URL",
-            "jdbc:hsqldb:file:" + getUMLSFile("/lookup/umls2011ab") + "/umls"),
-        "RxnormIndexReader",
-        ExternalResourceFactory.createExternalResourceDescription(
-            LuceneIndexReaderResourceImpl.class,
-            "",
-            "UseMemoryIndex",
-            true,
-            "IndexDirectory",
-            getUMLSFile("/lookup/rxnorm_index")),
-        "OrangeBookIndexReader",
-        ExternalResourceFactory.createExternalResourceDescription(
-            LuceneIndexReaderResourceImpl.class,
-            "",
-            "UseMemoryIndex",
-            true,
-            "IndexDirectory",
-            getUMLSFile("/lookup/OrangeBook"))));
+
+    // identify part-of-speech tags if requested
+    if (this.annotatorFlags.contains(AnnotatorType.PART_OF_SPEECH_TAGS)) {
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          POSTagger.class,
+          POSTagger.POS_MODEL_FILE_PARAM,
+          "models/mayo-pos.zip",
+          POSTagger.TAG_DICTIONARY_PARAM,
+          "models/tag.dictionary.txt",
+          POSTagger.CASE_SENSITIVE_PARAM,
+          true));
+    }
+
+    // identify UMLS named entities if requested
+    if (this.annotatorFlags.contains(AnnotatorType.UMLS_NAMED_ENTITIES)) {
+      // remove gold mentions if they're there (we'll add cTAKES mentions later instead)
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(EntityMentionRemover.class));
+      // identify chunks
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          Chunker.class,
+          "ChunkerModelFile",
+          new File(Chunker.class.getResource("/models/chunk-model.claims-1.5.zip").toURI()),
+          "ChunkCreatorClass",
+          DefaultChunkCreator.class));
+      // adjust NP in NP NP to span both
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          ChunkAdjuster.class,
+          "ChunkPattern",
+          new String[] { "NP", "NP" },
+          "IndexOfTokenToInclude",
+          1));
+      // adjust NP in NP PP NP to span all three
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          ChunkAdjuster.class,
+          "ChunkPattern",
+          new String[] { "NP", "PP", "NP" },
+          "IndexOfTokenToInclude",
+          2));
+      // add lookup windows for each NP
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(CopyNPChunksToLookupWindowAnnotations.class));
+      // maximize lookup windows
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          OverlapAnnotator.class,
+          "A_ObjectClass",
+          LookupWindowAnnotation.class,
+          "B_ObjectClass",
+          LookupWindowAnnotation.class,
+          "OverlapType",
+          "A_ENV_B",
+          "ActionType",
+          "DELETE",
+          "DeleteAction",
+          new String[] { "selector=B" }));
+      // add UMLS on top of lookup windows
+      aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
+          UmlsDictionaryLookupAnnotator.class,
+          "UMLSAddr",
+          "https://uts-ws.nlm.nih.gov/restful/isValidUMLSUser",
+          "UMLSVendor",
+          "NLM-6515182895",
+          "UMLSUser",
+          System.getProperty("umls.user"),
+          "UMLSPW",
+          System.getProperty("umls.password"),
+          "LookupDescriptor",
+          ExternalResourceFactory.createExternalResourceDescription(
+              FileResourceImpl.class,
+              getUMLSFile("/lookup/LookupDesc_Db.xml")),
+          "DbConnection",
+          ExternalResourceFactory.createExternalResourceDescription(
+              JdbcConnectionResourceImpl.class,
+              "",
+              "DriverClassName",
+              "org.hsqldb.jdbcDriver",
+              "URL",
+              "jdbc:hsqldb:file:" + getUMLSFile("/lookup/umls2011ab") + "/umls"),
+          "RxnormIndexReader",
+          ExternalResourceFactory.createExternalResourceDescription(
+              LuceneIndexReaderResourceImpl.class,
+              "",
+              "UseMemoryIndex",
+              true,
+              "IndexDirectory",
+              getUMLSFile("/lookup/rxnorm_index")),
+          "OrangeBookIndexReader",
+          ExternalResourceFactory.createExternalResourceDescription(
+              LuceneIndexReaderResourceImpl.class,
+              "",
+              "UseMemoryIndex",
+              true,
+              "IndexDirectory",
+              getUMLSFile("/lookup/OrangeBook"))));
+    }
     return aggregateBuilder.createAggregateDescription();
   }
 
