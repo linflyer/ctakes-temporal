@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
+import org.apache.ctakes.temporal.ae.THYMEKnowtatorXMLReader;
 import org.apache.uima.collection.CollectionReader;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.tcas.Annotation;
@@ -61,7 +61,7 @@ public class PrintRelations {
     CollectionReader reader = UriCollectionReader.getCollectionReaderFromFiles(files);
     AggregateBuilder aggregateBuilder = new AggregateBuilder();
     aggregateBuilder.add(UriToDocumentTextAnnotator.getDescription());
-    aggregateBuilder.add(KnowtatorXMLReader.getDescription(knowtatorXMLDirectory));
+    aggregateBuilder.add(THYMEKnowtatorXMLReader.getDescription(knowtatorXMLDirectory));
 
     // walk through each document in the collection
     for (JCas jCas : new JCasIterable(reader, aggregateBuilder.createAggregate())) {

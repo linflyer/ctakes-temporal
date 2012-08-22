@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.ctakes.sharp.ae.KnowtatorXMLReader;
+import org.apache.ctakes.temporal.ae.THYMEKnowtatorXMLReader;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.cas.CAS;
@@ -124,7 +124,7 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     aggregateBuilder.add(UriToDocumentTextAnnotator.getDescription());
     switch (pipelineType) {
       case TRAIN:
-        aggregateBuilder.add(KnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory));
+        aggregateBuilder.add(THYMEKnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory));
         break;
       case TEST:
         aggregateBuilder.add(AnalysisEngineFactory.createPrimitiveDescription(
@@ -138,7 +138,7 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
             ViewTextCopierAnnotator.PARAM_DESTINATION_VIEW_NAME,
             GOLD_VIEW_NAME));
         aggregateBuilder.add(
-            KnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory),
+            THYMEKnowtatorXMLReader.getDescription(this.knowtatorXMLDirectory),
             CAS.NAME_DEFAULT_SOFA,
             GOLD_VIEW_NAME);
         for (Class<? extends TOP> annotationClass : this.getAnnotationClassesThatShouldBeGoldAtTestTime()) {

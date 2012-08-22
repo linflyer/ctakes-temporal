@@ -10,22 +10,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.ctakes.knowtator.KnowtatorAnnotation;
 import org.apache.ctakes.knowtator.KnowtatorXMLParser;
-import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
 import org.apache.uima.jcas.JCas;
 import org.apache.uima.jcas.cas.FSArray;
 import org.apache.uima.jcas.tcas.Annotation;
-import org.apache.uima.resource.ResourceInitializationException;
 import org.cleartk.util.ViewURIUtil;
 import org.jdom2.JDOMException;
 import org.uimafit.component.JCasAnnotator_ImplBase;
 import org.uimafit.descriptor.ConfigurationParameter;
-import org.uimafit.factory.AnalysisEngineFactory;
 
 import edu.mayo.bmi.uima.core.type.constants.CONST;
 import edu.mayo.bmi.uima.core.type.refsem.Event;
@@ -38,42 +33,34 @@ import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textsem.EventMention;
 import edu.mayo.bmi.uima.core.type.textsem.TimeMention;
 
-public class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
-
-  public static AnalysisEngineDescription getDescription(File knowtatorXMLDirectory)
-      throws ResourceInitializationException {
-    return AnalysisEngineFactory.createPrimitiveDescription(
-        KnowtatorXMLReader.class,
-        KnowtatorXMLReader.PARAM_KNOWTATOR_XML_DIRECTORY,
-        knowtatorXMLDirectory);
-  }
+public abstract class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
 
   public static final String PARAM_KNOWTATOR_XML_DIRECTORY = "knowtatorXMLDirectory";
 
   @ConfigurationParameter(name = PARAM_KNOWTATOR_XML_DIRECTORY, mandatory = true)
-  private File knowtatorXMLDirectory;
+  protected File knowtatorXMLDirectory;
+
+  /**
+   * Given the URI of the plain text file, determines the URI of the Knowtator XML file
+   */
+  protected abstract URI getKnowtatorXML(URI uri);
+
+  /**
+   * Returns the names of the annotators in the Knowtator files that represent the gold standard
+   */
+  protected abstract String[] getAnnotatorNames();
 
   @Override
   public void process(JCas jCas) throws AnalysisEngineProcessException {
     // determine Knowtator XML file from URI of CAS
     URI uri = ViewURIUtil.getURI(jCas);
-    File file = new File(uri.getPath());
-    String subDir = file.getParentFile().getName();
-    Matcher matcher = Pattern.compile("^doc(\\d+)$").matcher(subDir);
-    if (!matcher.matches()) {
-      throw new IllegalArgumentException("Unrecognized subdirectory naming: " + subDir);
-    }
-    subDir = String.format("Set%02d", Integer.parseInt(matcher.group(1)));
-    String fileName = file.getName() + ".knowtator.xml";
-    File knowtatorFile = new File(new File(this.knowtatorXMLDirectory, subDir), fileName);
+    URI knowtatorXML = this.getKnowtatorXML(uri);
 
     // parse the Knowtator XML file into annotation objects
-    KnowtatorXMLParser parser = new KnowtatorXMLParser(
-        "consensus set annotator team",
-        "consensus set_rel annotator team");
+    KnowtatorXMLParser parser = new KnowtatorXMLParser(this.getAnnotatorNames());
     Collection<KnowtatorAnnotation> annotations;
     try {
-      annotations = parser.parse(knowtatorFile);
+      annotations = parser.parse(knowtatorXML);
     } catch (JDOMException e) {
       throw new AnalysisEngineProcessException(e);
     } catch (IOException e) {

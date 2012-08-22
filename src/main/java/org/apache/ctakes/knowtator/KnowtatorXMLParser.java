@@ -1,7 +1,7 @@
 package org.apache.ctakes.knowtator;
 
-import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -33,9 +33,9 @@ public class KnowtatorXMLParser {
     this.annotatorNames = annotatorNames;
   }
 
-  public Collection<KnowtatorAnnotation> parse(File knowtatorXMLFile) throws JDOMException,
-      IOException {
-    Element annotationsElem = new SAXBuilder().build(knowtatorXMLFile).getRootElement();
+  public Collection<KnowtatorAnnotation> parse(URI knowtatorXML) throws JDOMException, IOException {
+
+    Element annotationsElem = new SAXBuilder().build(knowtatorXML.toURL()).getRootElement();
 
     // parse <annotation> elements
     Set<String> ignoredAnnotators = new HashSet<String>();
@@ -69,7 +69,7 @@ public class KnowtatorXMLParser {
         }
       }
     }
-    LOGGER.fine(String.format("Ignored annotators %s in %s", ignoredAnnotators, knowtatorXMLFile));
+    LOGGER.fine(String.format("Ignored annotators %s in %s", ignoredAnnotators, knowtatorXML));
 
     // parse <stringSlotMention> elements
     Map<String, Slot<String>> stringSlots = new HashMap<String, Slot<String>>();
