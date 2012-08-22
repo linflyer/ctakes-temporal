@@ -6,7 +6,6 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -233,14 +232,17 @@ public abstract class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
       }
 
       // make sure all slots have been consumed
-      Set<String> remainingSlots = new HashSet<String>();
-      remainingSlots.addAll(stringSlots.keySet());
-      remainingSlots.addAll(booleanSlots.keySet());
-      remainingSlots.addAll(annotationSlots.keySet());
-      if (!remainingSlots.isEmpty()) {
-        String format = "%s has unprocessed slot(s) %s";
-        String message = String.format(format, annotation.type, remainingSlots);
-        throw new UnsupportedOperationException(message);
+      Map<String, Set<String>> slotGroups = new HashMap<String, Set<String>>();
+      slotGroups.put("stringSlots", stringSlots.keySet());
+      slotGroups.put("booleanSlots", booleanSlots.keySet());
+      slotGroups.put("annotationSlots", annotationSlots.keySet());
+      for (Map.Entry<String, Set<String>> entry : slotGroups.entrySet()) {
+        Set<String> remainingSlots = entry.getValue();
+        if (!remainingSlots.isEmpty()) {
+          String format = "%s has unprocessed %s: %s";
+          String message = String.format(format, annotation.type, entry.getKey(), remainingSlots);
+          throw new UnsupportedOperationException(message);
+        }
       }
     }
 
