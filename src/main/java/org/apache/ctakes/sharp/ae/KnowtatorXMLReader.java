@@ -217,7 +217,6 @@ public abstract class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         KnowtatorAnnotation target = annotationSlots.remove("related_to");
         String relationType = stringSlots.remove("Relationtype");
         relations.add(new KnowtatorRelation(annotation, source, target, relationType));
-        // TODO: store "ALINK" somehow
 
       } else if ("TLINK".equals(annotation.type)) {
         // store the TLINK information for later, once all annotations are in the CAS
@@ -225,7 +224,6 @@ public abstract class KnowtatorXMLReader extends JCasAnnotator_ImplBase {
         KnowtatorAnnotation target = annotationSlots.remove("related_to");
         String relationType = stringSlots.remove("Relationtype");
         relations.add(new KnowtatorRelation(annotation, source, target, relationType));
-        // TODO: store "TLINK" somehow
 
       } else {
         throw new IllegalArgumentException("Unrecognized type: " + annotation.type);
