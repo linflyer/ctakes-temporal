@@ -1,12 +1,18 @@
 package org.apache.ctakes.temporal.ae;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
+import org.apache.ctakes.feature.extractor.PhraseExtractor;
+import org.apache.ctakes.feature.extractor.SRLExtractor;
+import org.apache.ctakes.feature.extractor.WordValExtractor;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
 import org.apache.uima.analysis_engine.AnalysisEngineProcessException;
@@ -77,6 +83,10 @@ public class EventAnnotator extends CleartkAnnotator<String> {
   @Override
   public void initialize(UimaContext context) throws ResourceInitializationException {
     super.initialize(context);
+    
+    //read in the word-asf scroe list, and populate the hashtable
+    Hashtable<String, Float> word_asf = loadHastable(new File("src/main/resources/word_freq.lst"));
+    Hashtable<String, Float> word_pca = loadHastable(new File("src/main/resources/word_pca.lst"));
 
     // define chunkings
     this.entityChunking = new BIOChunking<BaseToken, EntityMention>(
@@ -90,20 +100,45 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     // add features: word, stem, pos
     this.tokenFeatureExtractors = new ArrayList<SimpleFeatureExtractor>();
     this.tokenFeatureExtractors.addAll(Arrays.asList(
-        new CoveredTextExtractor(),
+    	new CoveredTextExtractor(),
         new CharacterCategoryPatternExtractor(PatternType.ONE_PER_CHAR),
-        new TypePathExtractor(BaseToken.class, "partOfSpeech")));
+        new TypePathExtractor(BaseToken.class, "partOfSpeech"),
+        new SRLExtractor(),
+        new WordValExtractor(word_asf),
+        new WordValExtractor(word_pca),
+        new PhraseExtractor()
+        ));
 
     // add window of features before and after
     CombinedExtractor subExtractor = new CombinedExtractor(
         new CoveredTextExtractor(),
-        new TypePathExtractor(BaseToken.class, "partOfSpeech"));
+        new TypePathExtractor(BaseToken.class, "partOfSpeech"),
+        new SRLExtractor(),
+        new PhraseExtractor()
+    	);
     this.contextFeatureExtractors = new ArrayList<CleartkExtractor>();
     this.contextFeatureExtractors.add(new CleartkExtractor(
         BaseToken.class,
         subExtractor,
         new Preceding(3),
         new Following(3)));
+  }
+  
+  private Hashtable<String, Float> loadHastable(File file) {
+	  
+	  Hashtable<String, Float> ht = new Hashtable<String, Float>();
+	  try {
+			Scanner input = new Scanner(file);
+			while(input.hasNext()) {
+				String line = input.nextLine();
+				String[] wordAsf = line.trim().split(",");
+				ht.put(wordAsf[0], new Float(wordAsf[1]));
+			}
+			input.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	return ht;
   }
 
   @Override

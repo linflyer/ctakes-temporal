@@ -26,6 +26,8 @@ import org.uimafit.util.JCasUtil;
 import com.google.common.collect.Lists;
 import com.lexicalscope.jewel.cli.Option;
 
+import edu.mayo.bmi.nlp.parser.ae.ClearParserDependencyParserAE;
+import edu.mayo.bmi.nlp.parser.ae.ClearParserSemanticRoleLabelerAE;
 import edu.mayo.bmi.uima.adjuster.ChunkAdjuster;
 import edu.mayo.bmi.uima.cdt.ae.ContextDependentTokenizerAnnotator;
 import edu.mayo.bmi.uima.chunker.Chunker;
@@ -42,6 +44,8 @@ import edu.mayo.bmi.uima.core.type.syntax.Chunk;
 import edu.mayo.bmi.uima.core.type.textsem.EntityMention;
 import edu.mayo.bmi.uima.core.type.textspan.LookupWindowAnnotation;
 import edu.mayo.bmi.uima.lookup.ae.UmlsDictionaryLookupAnnotator;
+import edu.mayo.bmi.uima.lvg.ae.LvgAnnotator;
+import edu.mayo.bmi.uima.lvg.resource.LvgCmdApiResourceImpl;
 import edu.mayo.bmi.uima.pos_tagger.POSTagger;
 
 public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
@@ -255,6 +259,45 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
               "IndexDirectory",
               getUMLSFile("/lookup/OrangeBook"))));
     }
+    
+    //add lvg annotator
+    String[] XeroxTreebankMap = {"adj|JJ","adv|RB","aux|AUX","compl|CS","conj|CC","det|DET","modal|MD","noun|NN","prep|IN","pron|PRP","verb|VB"};
+    String[] ExclusionSet = {"and","And","by","By","for","For","in","In","of","Of","on","On","the","The","to","To","with","With"};
+    AnalysisEngineDescription lvgAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    		LvgAnnotator.class, 
+    	    //"LvgCmdApi","edu.mayo.bmi.uima.lvg.resource.LvgCmdApiResource",
+    		"UseSegments", false,
+    		"SegmentsToSkip",new String[0],
+    		"UseCmdCache", false,
+    		"CmdCacheFileLocation", LvgAnnotator.class.getResource("/lvg/2005_norm.voc").toURI().toString(),
+    		"CmdCacheFrequencyCutoff", 20,
+    		"ExclusionSet", ExclusionSet,
+    		"XeroxTreebankMap", XeroxTreebankMap,
+    		"LemmaCacheFileLocation", LvgAnnotator.class.getResource("/lvg/2005_lemma.voc").toURI().toString(),
+    		"UseLemmaCache", false,
+    		"LemmaCacheFrequencyCutoff", 20,
+    		"PostLemmas",true);
+    ExternalResourceFactory.createDependencyAndBind(
+    		lvgAnnotator,
+            "LvgCmdApi",
+            LvgCmdApiResourceImpl.class,
+            LvgAnnotator.class.getResource("/lvg/data/config/lvg.properties").toURI().toString());
+    aggregateBuilder.add(lvgAnnotator);
+    
+    //add dependency parser
+    AnalysisEngineDescription dependencyParserAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    		ClearParserDependencyParserAE.class,
+    		"ParserModelFileName",null,
+    		"ParserAlgorithmName", "shift-pop",
+    		"UseLemmatizer",true);
+    aggregateBuilder.add(dependencyParserAnnotator);
+    
+    //add semantic role labeler
+    AnalysisEngineDescription slrAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    		ClearParserSemanticRoleLabelerAE.class,
+    		"ParserModelFileName",null,
+    		"UseLemmatizer",true);
+    aggregateBuilder.add(slrAnnotator);
     return aggregateBuilder.createAggregateDescription();
   }
 
