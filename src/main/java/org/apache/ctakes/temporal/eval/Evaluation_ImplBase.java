@@ -52,7 +52,7 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     org.cleartk.eval.Evaluation_ImplBase<Integer, STATISTICS_TYPE> {
 
   public enum AnnotatorType {
-    PART_OF_SPEECH_TAGS, UMLS_NAMED_ENTITIES
+    PART_OF_SPEECH_TAGS, UMLS_NAMED_ENTITIES, LEXICAL_VARIANTS, DEPENDENCY_PARSERS, SEMANTIC_ROLES
   };
 
   protected final String GOLD_VIEW_NAME = "GoldView";
@@ -227,9 +227,9 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
           "UMLSVendor",
           "NLM-6515182895",
           "UMLSUser",
-          System.getProperty("umls.user"),
+          "linflyer",//System.getProperty("umls.user"),
           "UMLSPW",
-          System.getProperty("umls.password"),
+          "cMm!1940",//System.getProperty("umls.password"),
           "LookupDescriptor",
           ExternalResourceFactory.createExternalResourceDescription(
               FileResourceImpl.class,
@@ -261,9 +261,10 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     }
     
     //add lvg annotator
-    String[] XeroxTreebankMap = {"adj|JJ","adv|RB","aux|AUX","compl|CS","conj|CC","det|DET","modal|MD","noun|NN","prep|IN","pron|PRP","verb|VB"};
-    String[] ExclusionSet = {"and","And","by","By","for","For","in","In","of","Of","on","On","the","The","to","To","with","With"};
-    AnalysisEngineDescription lvgAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    if (this.annotatorFlags.contains(AnnotatorType.LEXICAL_VARIANTS)) {
+    	String[] XeroxTreebankMap = {"adj|JJ","adv|RB","aux|AUX","compl|CS","conj|CC","det|DET","modal|MD","noun|NN","prep|IN","pron|PRP","verb|VB"};
+    	String[] ExclusionSet = {"and","And","by","By","for","For","in","In","of","Of","on","On","the","The","to","To","with","With"};
+    	AnalysisEngineDescription lvgAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
     		LvgAnnotator.class, 
     	    //"LvgCmdApi","edu.mayo.bmi.uima.lvg.resource.LvgCmdApiResource",
     		"UseSegments", false,
@@ -277,27 +278,32 @@ public abstract class Evaluation_ImplBase<STATISTICS_TYPE> extends
     		"UseLemmaCache", false,
     		"LemmaCacheFrequencyCutoff", 20,
     		"PostLemmas",true);
-    ExternalResourceFactory.createDependencyAndBind(
+    	ExternalResourceFactory.createDependencyAndBind(
     		lvgAnnotator,
             "LvgCmdApi",
             LvgCmdApiResourceImpl.class,
             LvgAnnotator.class.getResource("/lvg/data/config/lvg.properties").toURI().toString());
-    aggregateBuilder.add(lvgAnnotator);
+    	aggregateBuilder.add(lvgAnnotator);
+    }
     
     //add dependency parser
-    AnalysisEngineDescription dependencyParserAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    if (this.annotatorFlags.contains(AnnotatorType.DEPENDENCY_PARSERS)) {
+    	AnalysisEngineDescription dependencyParserAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
     		ClearParserDependencyParserAE.class,
     		"ParserModelFileName",null,
     		"ParserAlgorithmName", "shift-pop",
     		"UseLemmatizer",true);
-    aggregateBuilder.add(dependencyParserAnnotator);
+    	aggregateBuilder.add(dependencyParserAnnotator);
+    }
     
     //add semantic role labeler
-    AnalysisEngineDescription slrAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
+    if (this.annotatorFlags.contains(AnnotatorType.SEMANTIC_ROLES)) {
+    	AnalysisEngineDescription slrAnnotator = AnalysisEngineFactory.createPrimitiveDescription(
     		ClearParserSemanticRoleLabelerAE.class,
     		"ParserModelFileName",null,
     		"UseLemmatizer",true);
-    aggregateBuilder.add(slrAnnotator);
+    	aggregateBuilder.add(slrAnnotator);
+    }
     return aggregateBuilder.createAggregateDescription();
   }
 

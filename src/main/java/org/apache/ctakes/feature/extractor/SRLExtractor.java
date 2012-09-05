@@ -23,7 +23,9 @@ public class SRLExtractor implements SimpleFeatureExtractor {
 	@Override
 	public List<Feature> extract(JCas jCas, Annotation focusAnnotation)
 			throws CleartkExtractorException {
-		
+		// TODO: don't iterate over the entire CAS for each focusAnnotation; use JCasUtil.indexCovering and cache the results so that we only do this once per CAS
+
+
 		Feature feature = new Feature("NoRole");
 		for (Predicate predicate : JCasUtil.select(jCas, Predicate.class)) {
 			

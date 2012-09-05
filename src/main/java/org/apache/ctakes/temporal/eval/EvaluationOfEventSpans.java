@@ -47,7 +47,10 @@ public class EvaluationOfEventSpans extends EvaluationOfAnnotationSpans_ImplBase
       List<Integer> patientSets) {
     super(baseDirectory, rawTextDirectory, knowtatorXMLDirectory, patientSets, EnumSet.of(
         AnnotatorType.PART_OF_SPEECH_TAGS,
-        AnnotatorType.UMLS_NAMED_ENTITIES));
+        AnnotatorType.UMLS_NAMED_ENTITIES,
+        AnnotatorType.LEXICAL_VARIANTS,
+        AnnotatorType.DEPENDENCY_PARSERS,
+        AnnotatorType.SEMANTIC_ROLES));
   }
 
   @Override

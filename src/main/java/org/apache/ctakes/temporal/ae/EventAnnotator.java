@@ -1,7 +1,12 @@
 package org.apache.ctakes.temporal.ae;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -12,6 +17,7 @@ import java.util.Scanner;
 
 import org.apache.ctakes.feature.extractor.PhraseExtractor;
 import org.apache.ctakes.feature.extractor.SRLExtractor;
+import org.apache.ctakes.feature.extractor.WordMultiValExtractor;
 import org.apache.ctakes.feature.extractor.WordValExtractor;
 import org.apache.uima.UimaContext;
 import org.apache.uima.analysis_engine.AnalysisEngineDescription;
@@ -85,9 +91,18 @@ public class EventAnnotator extends CleartkAnnotator<String> {
     super.initialize(context);
     
     //read in the word-asf scroe list, and populate the hashtable
-    Hashtable<String, Float> word_asf = loadHastable(new File("src/main/resources/word_freq.lst"));
-    Hashtable<String, Float> word_pca = loadHastable(new File("src/main/resources/word_pca.lst"));
-
+    HashMap<String, Float> word_asf = null;
+    HashMap<String, Float> word_pca = null;
+    HashMap<String, Float[]> wordTim_pca = null;
+	try {
+		word_asf = loadHashMap(EventAnnotator.class.getResource("/word_freq.lst"));
+		word_pca = loadHashMap(EventAnnotator.class.getResource("/word_pca.lst"));//new File("src/main/resources/word_pca.lst"));
+		wordTim_pca = loadHashListMap(EventAnnotator.class.getResource("/tim_word_pca.txt")); //new File("src/main/resources/tim_word_pca.txt"));
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+	
     // define chunkings
     this.entityChunking = new BIOChunking<BaseToken, EntityMention>(
         BaseToken.class,
@@ -106,6 +121,7 @@ public class EventAnnotator extends CleartkAnnotator<String> {
         new SRLExtractor(),
         new WordValExtractor(word_asf),
         new WordValExtractor(word_pca),
+        new WordMultiValExtractor(wordTim_pca),
         new PhraseExtractor()
         ));
 
@@ -124,21 +140,44 @@ public class EventAnnotator extends CleartkAnnotator<String> {
         new Following(3)));
   }
   
-  private Hashtable<String, Float> loadHastable(File file) {
+  private HashMap<String, Float[]> loadHashListMap(URL url) throws IOException{
+	HashMap<String, Float[]> ht = new HashMap<String, Float[]>();
+	URLConnection yc;
 	  
-	  Hashtable<String, Float> ht = new Hashtable<String, Float>();
-	  try {
-			Scanner input = new Scanner(file);
-			while(input.hasNext()) {
-				String line = input.nextLine();
-				String[] wordAsf = line.trim().split(",");
-				ht.put(wordAsf[0], new Float(wordAsf[1]));
-			}
-			input.close();
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
+	yc = url.openConnection();
+	BufferedReader in = new BufferedReader(new InputStreamReader(
+			yc.getInputStream()));
+	String line;
+	while ((line = in.readLine()) != null){
+	  String[] wordAsf = line.trim().split(",");
+	  Float[] fts = new Float[6];
+	  for (int i=1; i<=6; i++){
+			fts[i-1] = new Float(wordAsf[i]);
+	  }
+	  ht.put(wordAsf[0], fts);
+	}
+	in.close();
+	
 	return ht;
+}
+
+private HashMap<String, Float> loadHashMap(URL url) throws IOException{
+	  
+	  HashMap<String, Float> ht = new HashMap<String, Float>();
+	  URLConnection yc;
+	
+		yc = url.openConnection();
+		BufferedReader in = new BufferedReader(new InputStreamReader(
+	              yc.getInputStream()));
+		String line;
+	    while ((line = in.readLine()) != null){
+			String[] wordAsf = line.trim().split(",");
+			ht.put(wordAsf[0], new Float(wordAsf[1]));
+	    }
+	    in.close();
+	
+	  
+      return ht;
   }
 
   @Override

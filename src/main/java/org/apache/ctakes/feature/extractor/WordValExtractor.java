@@ -1,7 +1,7 @@
 package org.apache.ctakes.feature.extractor;
 
 import java.util.Collections;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.uima.jcas.JCas;
@@ -14,10 +14,10 @@ import org.cleartk.classifier.feature.extractor.simple.SimpleFeatureExtractor;
 
 public class WordValExtractor implements SimpleFeatureExtractor {
 	
-	private Hashtable<String, Float> word_val;
+	private HashMap<String, Float> word_val;
 	private Float default_val;
 
-	public WordValExtractor(Hashtable<String, Float> wordVal) {
+	public WordValExtractor(HashMap<String, Float> wordVal) {
 		super();
 		this.word_val = wordVal;
 		this.default_val = calDefault();
@@ -43,7 +43,6 @@ public class WordValExtractor implements SimpleFeatureExtractor {
 			Float num = word_val.get(token.getCoveredText());
 			if(num != null){
 				feature = new Feature(num);
-				System.out.println("*********** word_val: "+ token.getCoveredText()+" :: "+ num.toString());
 			}
 		}
 		
